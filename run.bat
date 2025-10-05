@@ -5,5 +5,5 @@ set GIT_EXE=%CD%\..\PortableGit\bin\git.exe
 @echo off
 setlocal
 
-wa_broadcaster.exe
+wa_broadcaster_execute.bat
 pause
