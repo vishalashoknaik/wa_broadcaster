@@ -3,3 +3,10 @@
 /build
 /dist
 /__pycache__
+/src/build
+/src/dist
+/src/releases
+/src/.idea
+/src/__pycache__
+/src/WaBroadcaster.iml
+/src/wa_broadcaster.spec
