@@ -1,7 +1,7 @@
 {
   "excel_path": "config/test.xlsx",
-  "log_file": "config/whatsapp.log",
   "message_file": "config/message.txt",
+  "log_file": "config/whatsapp.log",
   "exclude_file": "config/exclude.txt",
   "sent_numbers_file": "config/sent_numbers.log",
   "error_numbers_file": "config/failed_numbers.log",
