@@ -2,3 +2,4 @@
 /releases
 /build
 /dist
+/__pycache__
