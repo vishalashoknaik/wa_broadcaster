@@ -53,8 +53,8 @@ if !errorlevel! neq 0 (
 )
 
 echo Adding and committing changes...
-git add -A
-git commit -am "new release - %date% %time%"
+git add -u
+git commit -m "new release - %date% %time%"
 if !errorlevel! neq 0 (
     echo ERROR: Git commit failed
     set "SUCCESS=0"
