@@ -1,5 +1,5 @@
 {
-  "excel_path": "config/test.xlsx",
+  "excel_path": "config/contacts.xlsx",
   "message_file": "config/message.txt",
   "log_file": "config/whatsapp.log",
   "exclude_file": "config/exclude.txt",
@@ -10,5 +10,5 @@
     "100": 30,
     "300": 30
   },
-  "default_delay": 1
+  "default_delay": 5
 }
