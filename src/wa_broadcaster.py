@@ -7,7 +7,7 @@ import time
 import json
 import argparse
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 
 class WhatsAppOrchestrator:
@@ -52,7 +52,7 @@ class WhatsAppOrchestrator:
     def run(self):
         if not self.messenger.login():
             print("", flush=True)
-            input("Scan QR Code then press Enter...")
+            input("Scan QR Code then press Enter...\n\n")
 
         contacts = self._get_contacts()
         excluded = self.tracker.get_excluded_numbers()
