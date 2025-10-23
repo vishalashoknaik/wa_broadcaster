@@ -62,7 +62,8 @@ if !errorlevel! neq 0 (
 )
 
 echo Pushing to remote repository...
-git push origin main
+git push -u origin main
+
 if !errorlevel! neq 0 (
     echo ERROR: Git push failed
     set "SUCCESS=0"
