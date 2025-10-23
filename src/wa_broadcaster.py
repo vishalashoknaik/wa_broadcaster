@@ -7,7 +7,7 @@ import time
 import json
 import argparse
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 
 class WhatsAppOrchestrator:
