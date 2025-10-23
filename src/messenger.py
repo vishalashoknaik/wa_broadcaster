@@ -75,7 +75,7 @@ class WhatsAppMessenger:
                     # Fallback to clipboard
                     pyperclip.copy(message)
                     # Use both CONTROL and COMMAND for cross-platform compatibility
-                    self.driver.find_element(By.XPATH, '//div[@contenteditable="true"]').send_keys(Keys.CONTROL + 'v')
+                    self.driver.find_element(By.XPATH, '//div[@contenteditable="true"]').send_keys(Keys.COMMAND + 'v')
                     time.sleep(0.5)
                     self.driver.find_element(By.XPATH, '//div[@contenteditable="true"]').send_keys(Keys.ENTER)
                     return True
@@ -107,8 +107,8 @@ class WhatsAppMessenger:
                     (By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]'))
             )
 
-            # Paste using both CONTROL and COMMAND for cross-platform
-            input_box.send_keys(Keys.CONTROL + 'v')
+            # Paste using both COMMAND and CONTROL for cross-platform
+            input_box.send_keys(Keys.COMMAND + 'v')
             time.sleep(1)
             input_box.send_keys(Keys.ENTER)
 
