@@ -7,7 +7,7 @@ import time
 import json
 import argparse
 
-__version__ = "1.4.1"
+__version__ = "1.5.0"
 
 
 class WhatsAppOrchestrator:
@@ -34,7 +34,9 @@ class WhatsAppOrchestrator:
         for _, row in df.iterrows():
             if pd.notna(row['WhatsApp Number']):
                 raw_num = str(row['WhatsApp Number']).strip().replace('.0', '')
-                contacts.append((str(row['Name']), raw_num))
+                name = str(row['Name'])
+                nick_name = str(row['nick_name']) if pd.notna(row.get('nick_name')) else " "
+                contacts.append((name, raw_num, nick_name))
         return contacts
 
     def _check_timeout(self):
@@ -60,16 +62,21 @@ class WhatsAppOrchestrator:
 
         print("", flush=True)
         ph_num = input('Enter your phone number to send test message: ')
+        nick_name = input('Enter nick_name: ')
         print('Sending test message to', ph_num, flush=True)
         time.sleep(1)
-        result = self.messenger.send_exact_message(ph_num, self.message)
+
+        message_to_send = self.message.replace("<nick_name>", nick_name)
+        print('Message Preview:', message_to_send)
+        result = self.messenger.send_exact_message(ph_num, message_to_send)
+
         print('Verify the message sent to your phone number and confirm.')
         print('Also check if your config file is correct.')
         response = input('Input "Yes" if message is fine, else input "No" to cancel: ')
         if response.upper() != 'YES':
             sys.exit(-1)
 
-        for name, number in contacts:
+        for name, number, nick_name in contacts:
             if number in excluded:
                 self.tracker.logger.info(f"SKIPPED (excluded): {number}")
                 continue
@@ -79,7 +86,9 @@ class WhatsAppOrchestrator:
                 continue
 
             try:
-                result = self.messenger.send_exact_message(number, self.message)
+                # Replace <nick_name> placeholder with actual nick_name
+                message_to_send = self.message.replace("<nick_name>", nick_name)
+                result = self.messenger.send_exact_message(number, message_to_send)
                 if result is True:
                     self.tracker.record_success(name, number)
                     self._check_timeout()
