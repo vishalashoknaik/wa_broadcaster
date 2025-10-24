@@ -7,8 +7,8 @@ import time
 import json
 import argparse
 
-__version__ = "1.5.0"
-
+from lib import random_sleep
+__version__ = "1.5.1"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
@@ -64,7 +64,7 @@ class WhatsAppOrchestrator:
         ph_num = input('Enter your phone number to send test message: ')
         nick_name = input('Enter nick_name: ')
         print('Sending test message to', ph_num, flush=True)
-        time.sleep(1)
+        random_sleep(1)
 
         message_to_send = self.message.replace("<nick_name>", nick_name)
         print('Message Preview:', message_to_send)
@@ -95,7 +95,7 @@ class WhatsAppOrchestrator:
                 else:
                     self.tracker.record_failure(name, number, 'Time out')
 
-                time.sleep(self.config['default_delay'])
+                random_sleep(self.config['default_delay'])
 
             except Exception as e:
                 self.tracker.logger.error(f"CRITICAL ERROR: {str(e)}")

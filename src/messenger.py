@@ -1,3 +1,4 @@
+import platform
 import time
 
 import pyperclip
@@ -10,6 +11,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
+from lib import random_sleep
+
+# Define OS-specific paste shortcut
+PASTE_SHORTCUT = Keys.COMMAND + 'v' if platform.system() == 'Darwin' else Keys.CONTROL + 'v'
 
 class WhatsAppMessenger:
     def __init__(self, user_data_dir):
@@ -68,15 +73,15 @@ class WhatsAppMessenger:
                 # Try DOM injection first
                 try:
                     self._inject_message(message)
-                    time.sleep(1)
+                    random_sleep(4)
                     self.driver.find_element(By.XPATH, '//div[@contenteditable="true"]').send_keys(Keys.ENTER)
                     return True
                 except Exception as e:
                     # Fallback to clipboard
                     pyperclip.copy(message)
                     # Use both CONTROL and COMMAND for cross-platform compatibility
-                    self.driver.find_element(By.XPATH, '//div[@contenteditable="true"]').send_keys(Keys.COMMAND + 'v')
-                    time.sleep(0.5)
+                    self.driver.find_element(By.XPATH, '//div[@contenteditable="true"]').send_keys(PASTE_SHORTCUT)
+                    random_sleep(4)
                     self.driver.find_element(By.XPATH, '//div[@contenteditable="true"]').send_keys(Keys.ENTER)
                     return True
 
@@ -108,12 +113,12 @@ class WhatsAppMessenger:
             )
 
             # Paste using both COMMAND and CONTROL for cross-platform
-            input_box.send_keys(Keys.COMMAND + 'v')
-            time.sleep(1)
+            input_box.send_keys(PASTE_SHORTCUT)
+            random_sleep(3)
             input_box.send_keys(Keys.ENTER)
 
             # Verify delivery
-            time.sleep(2)
+            random_sleep(5)
             if "msg-time" not in self.driver.page_source:
                 return True
 
