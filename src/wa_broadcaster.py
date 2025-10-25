@@ -92,10 +92,16 @@ class WhatsAppOrchestrator:
                 if result is True:
                     self.tracker.record_success(name, number)
                     self._check_timeout()
+                    random_sleep(self.config['default_delay'])
                 else:
-                    self.tracker.record_failure(name, number, 'Time out')
+                    # result contains the specific error message
+                    self.tracker.record_failure(name, number, result)
 
-                random_sleep(self.config['default_delay'])
+                    # Critical: Stop if rate limited to avoid account ban
+                    if "RATE LIMIT DETECTED" in str(result):
+                        self.tracker.logger.error("⚠️ CRITICAL: Rate limit detected! Stopping to protect account.")
+                        self.tracker.logger.error("⚠️ Wait at least 24 hours before resuming.")
+                        break
 
             except Exception as e:
                 self.tracker.logger.error(f"CRITICAL ERROR: {str(e)}")
