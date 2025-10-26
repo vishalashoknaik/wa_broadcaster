@@ -7,8 +7,9 @@ import time
 import json
 import argparse
 
-from lib import random_sleep
-__version__ = "1.5.1"
+from lib import random_sleep, normalize_phone
+
+__version__ = "1.6.0"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
@@ -77,11 +78,11 @@ class WhatsAppOrchestrator:
             sys.exit(-1)
 
         for name, number, nick_name in contacts:
-            if number in excluded:
+            if normalize_phone(number) in excluded:
                 self.tracker.logger.info(f"SKIPPED (excluded): {number}")
                 continue
 
-            if number in sent:
+            if normalize_phone(number) in sent:
                 self.tracker.logger.info(f"SKIPPED (already sent): {number}")
                 continue
 
