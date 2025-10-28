@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-from lib import random_sleep
+from lib import random_sleep, format_phone_for_whatsapp
 
 # Define OS-specific paste shortcut
 PASTE_SHORTCUT = Keys.COMMAND + 'v' if platform.system() == 'Darwin' else Keys.CONTROL + 'v'
@@ -54,12 +54,14 @@ class WhatsAppMessenger:
     def send_message(self, number, message):
         """Returns True if message sent, False if failed"""
         try:
-            # Force fresh load with cache busting
-            #message = f'sending message to {number}'
-            number = '9964297517'
+            # Format number with country code
+            formatted_number = format_phone_for_whatsapp(number)
+            if not formatted_number:
+                return False  # Invalid number format
+
             # Process non-BMP chars
             safe_content = message.encode('utf-16', 'surrogatepass').decode('utf-16')
-            chat_url = f"https://web.whatsapp.com/send?phone={number}"
+            chat_url = f"https://web.whatsapp.com/send?phone={formatted_number}"
             self.driver.get(chat_url)
 
             # Main sending attempt (15 sec max)
@@ -102,9 +104,13 @@ class WhatsAppMessenger:
         Returns: True on success, error string on failure
         """
         try:
-            # number = '9964297517'
+            # Format number with country code (normalize + validate + add country code)
+            formatted_number = format_phone_for_whatsapp(number)
+            if not formatted_number:
+                return f"Invalid phone number format: {number}"
+
             # Load blank chat
-            self.driver.get(f"https://web.whatsapp.com/send?phone={number}")
+            self.driver.get(f"https://web.whatsapp.com/send?phone={formatted_number}")
             #time.sleep(3)
 
             # Check for invalid number alert
