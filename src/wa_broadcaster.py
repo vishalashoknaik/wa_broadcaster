@@ -9,7 +9,7 @@ import argparse
 
 from lib import random_sleep, normalize_phone
 
-__version__ = "1.6.0"
+__version__ = "1.6.1"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
