@@ -7,8 +7,9 @@ import time
 import json
 import argparse
 
-from lib import random_sleep
-__version__ = "1.5.1"
+from lib import random_sleep, normalize_phone
+
+__version__ = "1.6.0"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
@@ -77,11 +78,11 @@ class WhatsAppOrchestrator:
             sys.exit(-1)
 
         for name, number, nick_name in contacts:
-            if number in excluded:
+            if normalize_phone(number) in excluded:
                 self.tracker.logger.info(f"SKIPPED (excluded): {number}")
                 continue
 
-            if number in sent:
+            if normalize_phone(number) in sent:
                 self.tracker.logger.info(f"SKIPPED (already sent): {number}")
                 continue
 
@@ -92,10 +93,16 @@ class WhatsAppOrchestrator:
                 if result is True:
                     self.tracker.record_success(name, number)
                     self._check_timeout()
+                    random_sleep(self.config['default_delay'])
                 else:
-                    self.tracker.record_failure(name, number, 'Time out')
+                    # result contains the specific error message
+                    self.tracker.record_failure(name, number, result)
 
-                random_sleep(self.config['default_delay'])
+                    # Critical: Stop if rate limited to avoid account ban
+                    if "RATE LIMIT DETECTED" in str(result):
+                        self.tracker.logger.error("⚠️ CRITICAL: Rate limit detected! Stopping to protect account.")
+                        self.tracker.logger.error("⚠️ Wait at least 24 hours before resuming.")
+                        break
 
             except Exception as e:
                 self.tracker.logger.error(f"CRITICAL ERROR: {str(e)}")
