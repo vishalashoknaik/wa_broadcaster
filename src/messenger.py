@@ -25,13 +25,28 @@ class WhatsAppMessenger:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-extensions")
-        options.add_argument("--remote-debugging-port=9222")
+        # Let Chrome choose a random debug port to avoid conflicts
+        options.add_argument("--remote-debugging-port=0")
 
-        self.driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
-            options=options
-        )
-        self.wait = WebDriverWait(self.driver, 20)
+        try:
+            self.driver = webdriver.Chrome(
+                service=Service(ChromeDriverManager().install()),
+                options=options
+            )
+            self.wait = WebDriverWait(self.driver, 20)
+        except Exception as e:
+            error_msg = str(e)
+            if "Chrome instance exited" in error_msg or "session not created" in error_msg:
+                print("\n" + "="*70)
+                print("❌ CHROME LAUNCH FAILED")
+                print("="*70)
+                print(f"\n⚠️  Chrome profile may be corrupted: {user_data_dir}")
+                print("\n💡 SOLUTIONS:")
+                print(f"   1. Delete the profile directory and restart:")
+                print(f"      rm -rf {user_data_dir}")
+                print(f"\n   2. Or change 'chrome_user_data' path in config.json")
+                print("\n" + "="*70 + "\n")
+            raise
 
     def login(self):
         self.driver.get("https://web.whatsapp.com")
