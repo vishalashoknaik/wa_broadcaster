@@ -11,8 +11,9 @@ import random
 from lib import random_sleep, normalize_phone
 from google_sheets_client import GoogleSheetsClient
 import message_parser
+from table_display import print_table
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
@@ -30,19 +31,30 @@ class WhatsAppOrchestrator:
         """Load message pools from Google Sheets"""
         try:
             gs_config = self.config.get('google_sheets_config', {})
-
-            if not gs_config.get('enabled'):
-                raise Exception("Google Sheets is not enabled in config")
+            messages_config = gs_config.get('messages', {})
 
             # Download from Google Sheets
             sheets_client = GoogleSheetsClient(self.tracker.logger)
-            rows = sheets_client.fetch_messages(
-                gs_config['spreadsheet_id'],
-                gs_config.get('sheet_gid', 0)
-            )
+
+            sheet_url = messages_config.get('sheet_url')
+            tab_name = messages_config.get('tab_name')
+
+            if not sheet_url or not tab_name:
+                raise Exception("Messages config must have 'sheet_url' and 'tab_name'")
+
+            rows, available_sheets = sheets_client.fetch_messages_by_tab_name(sheet_url, tab_name)
 
             # Parse into MessagePools (separate first/followup pools)
             pools = message_parser.parse_from_google_sheets(rows)
+
+            # Store for preview
+            self.messages_preview_data = {
+                'sheet_url': sheet_url,
+                'tab_name': tab_name,
+                'available_sheets': available_sheets,
+                'rows': rows[:2],  # First 2 rows for preview
+                'headers': ['First Messages', 'Followup Messages']
+            }
 
             self.tracker.logger.info(
                 f"✅ Loaded {len(pools.first_messages)} first messages, "
@@ -51,7 +63,7 @@ class WhatsAppOrchestrator:
             return pools
 
         except Exception as e:
-            raise Exception(f"Failed to load messages from Google Sheets: {str(e)}")
+            raise Exception(f"Failed to load messages: {str(e)}")
 
     def _get_random_message_combination(self, nick_name):
         """Select random first message and random followup message independently
@@ -84,15 +96,50 @@ class WhatsAppOrchestrator:
         )
 
     def _get_contacts(self):
-        df = pd.read_excel(self.config['excel_path'])
-        contacts = []
-        for _, row in df.iterrows():
-            if pd.notna(row['WhatsApp Number']):
-                raw_num = str(row['WhatsApp Number']).strip().replace('.0', '')
-                name = str(row['Name'])
-                nick_name = str(row['nick_name']) if pd.notna(row.get('nick_name')) else " "
-                contacts.append((name, raw_num, nick_name))
-        return contacts
+        """Load contacts from Google Sheets"""
+        try:
+            gs_config = self.config.get('google_sheets_config', {})
+            contacts_config = gs_config.get('contacts', {})
+
+            # Download from Google Sheets
+            sheets_client = GoogleSheetsClient(self.tracker.logger)
+
+            sheet_url = contacts_config.get('sheet_url')
+            tab_name = contacts_config.get('tab_name')
+
+            if not sheet_url or not tab_name:
+                raise Exception("Contacts config must have 'sheet_url' and 'tab_name'")
+
+            rows, available_sheets = sheets_client.fetch_messages_by_tab_name(sheet_url, tab_name)
+
+            # Store for preview
+            self.contacts_preview_data = {
+                'sheet_url': sheet_url,
+                'tab_name': tab_name,
+                'available_sheets': available_sheets,
+                'rows': rows[:2],  # First 2 rows for preview
+                'headers': ['Name', 'WhatsApp Number', 'nick_name']
+            }
+
+            # Parse contacts
+            contacts = []
+            for row in rows:
+                if len(row) >= 2:  # At minimum need name and number
+                    name = row[0] if len(row) > 0 else ""
+                    number = row[1] if len(row) > 1 else ""
+                    nick_name = row[2] if len(row) > 2 else " "
+                    if name and number:
+                        # Normalize number
+                        number = str(number).strip().replace('.0', '')
+                        contacts.append((name, number, nick_name))
+
+            self.tracker.logger.info(
+                f"✅ Loaded {len(contacts)} contacts from Google Sheets"
+            )
+            return contacts
+
+        except Exception as e:
+            raise Exception(f"Failed to load contacts: {str(e)}")
 
     def _track_combination_usage(self, first_idx, followup_idx):
         """Track which message combinations were used"""
@@ -171,6 +218,42 @@ class WhatsAppOrchestrator:
 
         print("\n" + "="*70 + "\n")
 
+    def _preview_sheets(self):
+        """Display preview of messages and contacts sheets for user verification"""
+        print("\n" + "="*70)
+        print("=== GOOGLE SHEETS PREVIEW ===")
+        print("="*70)
+
+        # Messages preview
+        if hasattr(self, 'messages_preview_data'):
+            print("\n📋 MESSAGES SHEET:")
+            print(f"URL: {self.messages_preview_data['sheet_url']}")
+            print(f"Tab: {self.messages_preview_data['tab_name']}")
+            print(f"Available tabs: {', '.join(self.messages_preview_data['available_sheets'])}")
+            print(f"\nShowing first 2 rows:")
+            print_table(
+                self.messages_preview_data['headers'],
+                self.messages_preview_data['rows'],
+                max_rows=2
+            )
+
+        # Contacts preview
+        if hasattr(self, 'contacts_preview_data'):
+            print("\n👥 CONTACTS SHEET:")
+            print(f"URL: {self.contacts_preview_data['sheet_url']}")
+            print(f"Tab: {self.contacts_preview_data['tab_name']}")
+            print(f"Available tabs: {', '.join(self.contacts_preview_data['available_sheets'])}")
+            print(f"\nShowing first 2 rows:")
+            print_table(
+                self.contacts_preview_data['headers'],
+                self.contacts_preview_data['rows'],
+                max_rows=2
+            )
+
+        print("\n" + "="*70)
+        print("⚠️  PLEASE VERIFY THE DATA ABOVE MATCHES YOUR GOOGLE SHEETS")
+        print("="*70 + "\n")
+
     def _check_timeout(self):
         """Check and apply timeouts based on sent count"""
         sent_count = self.tracker.sent_count
@@ -191,6 +274,14 @@ class WhatsAppOrchestrator:
         contacts = self._get_contacts()
         excluded = self.tracker.get_excluded_numbers()
         sent = self.tracker.get_already_sent()
+
+        # Show preview of Google Sheets data if available
+        if hasattr(self, 'messages_preview_data') or hasattr(self, 'contacts_preview_data'):
+            self._preview_sheets()
+            response = input('Do the sheets above look correct? Type "YES" to continue or "NO" to cancel: ')
+            if response.upper() != 'YES':
+                print("Campaign cancelled by user.")
+                sys.exit(0)
 
         print("", flush=True)
         ph_num = input('Enter your phone number to send test message: ')
