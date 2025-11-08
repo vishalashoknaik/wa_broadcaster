@@ -40,9 +40,10 @@ class WhatsAppTracker:
         Path(self.config['sent_numbers_file']).touch()
         Path(self.config['error_numbers_file']).touch()
 
-    def record_success(self, name, number):
+    def record_success(self, name, number, variant_info=None):
         self.sent_count += 1
-        self.logger.info(f"SUCCESS (#{self.sent_count}): {name} ({number})")
+        variant_str = f" [variant: {variant_info}]" if variant_info else ""
+        self.logger.info(f"SUCCESS (#{self.sent_count}): {name} ({number}){variant_str}")
         with open(self.config['sent_numbers_file'], 'a') as f:
             f.write(f"{number}\n")
 
