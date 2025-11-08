@@ -25,7 +25,8 @@ class WhatsAppMessenger:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-extensions")
-        options.add_argument("--remote-debugging-port=9222")
+        # Let Chrome choose a random debug port to avoid conflicts
+        options.add_argument("--remote-debugging-port=0")
 
         self.driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
