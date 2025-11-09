@@ -122,8 +122,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Load existing config or use example
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
 def load_config():
+    """Load configuration from config.json or config.example.json"""
     if os.path.exists("config.json"):
         with open("config.json", "r") as f:
             return json.load(f)
@@ -148,12 +152,104 @@ def load_config():
         }
 
 def save_config(config):
+    """Save configuration to config.json"""
     with open("config.json", "w") as f:
         json.dump(config, f, indent=2)
+
+def get_nested_config(config, *keys, default=""):
+    """Safely extract nested config value with multiple .get() calls
+
+    Args:
+        config: Configuration dictionary
+        *keys: Variable number of nested keys to traverse
+        default: Default value if any key is missing
+
+    Returns:
+        Value at nested path or default
+
+    Example:
+        get_nested_config(config, "google_sheets_config", "messages", "sheet_url")
+        # Instead of: config.get("google_sheets_config", {}).get("messages", {}).get("sheet_url", "")
+    """
+    result = config
+    for key in keys:
+        if isinstance(result, dict):
+            result = result.get(key, {})
+        else:
+            return default
+    return result if result != {} else default
+
+def update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, delay):
+    """Update Google Sheets configuration
+
+    Args:
+        config: Configuration dictionary to update
+        messages_url: Messages sheet URL
+        messages_tab: Messages sheet tab name
+        contacts_url: Contacts sheet URL
+        contacts_tab: Contacts sheet tab name
+        delay: Default delay between messages
+    """
+    config["google_sheets_config"]["messages"]["sheet_url"] = messages_url
+    config["google_sheets_config"]["messages"]["tab_name"] = messages_tab
+    config["google_sheets_config"]["contacts"]["sheet_url"] = contacts_url
+    config["google_sheets_config"]["contacts"]["tab_name"] = contacts_tab
+    config["default_delay"] = delay
+
+def save_and_update_session(config, success_message=None):
+    """Save config to file and update session state
+
+    Args:
+        config: Configuration dictionary
+        success_message: Optional success message to display
+    """
+    save_config(config)
+    st.session_state.config = config
+    if success_message:
+        st.success(success_message)
+
+def launch_terminal_process(script_path, config_path):
+    """Launch wa_broadcaster.py in a new terminal window
+
+    Args:
+        script_path: Absolute path to wa_broadcaster.py
+        config_path: Absolute path to config.json
+
+    Returns:
+        subprocess.Popen object or None if failed
+    """
+    try:
+        if platform.system() == "Windows":
+            # Note: shell=True is used here for Windows 'start' command compatibility
+            # Alternative without shell=True is more complex on Windows
+            process = subprocess.Popen(
+                ['start', 'cmd', '/k', 'python', script_path, '--config', config_path],
+                shell=True
+            )
+        elif platform.system() == "Darwin":  # macOS
+            process = subprocess.Popen([
+                'osascript', '-e',
+                f'tell application "Terminal" to do script "cd {os.getcwd()} && python3 {script_path} --config {config_path}"'
+            ])
+        else:  # Linux
+            process = subprocess.Popen([
+                'x-terminal-emulator', '-e',
+                'python3', script_path, '--config', config_path
+            ])
+        return process
+    except Exception as e:
+        raise Exception(f"Failed to launch terminal: {str(e)}")
+
+# ============================================================================
+# MAIN APP
+# ============================================================================
 
 # Initialize session state
 if 'config' not in st.session_state:
     st.session_state.config = load_config()
+
+if 'process' not in st.session_state:
+    st.session_state.process = None
 
 config = st.session_state.config
 
@@ -177,14 +273,14 @@ with tab1:
         st.markdown("**Messages Sheet**")
         messages_url = st.text_input(
             "Messages Sheet URL",
-            value=config.get("google_sheets_config", {}).get("messages", {}).get("sheet_url", ""),
+            value=get_nested_config(config, "google_sheets_config", "messages", "sheet_url"),
             placeholder="Paste your Google Sheets URL here...",
             key="messages_url",
             label_visibility="collapsed"
         )
         messages_tab = st.text_input(
             "Tab Name",
-            value=config.get("google_sheets_config", {}).get("messages", {}).get("tab_name", "Sheet1"),
+            value=get_nested_config(config, "google_sheets_config", "messages", "tab_name", default="Sheet1"),
             key="messages_tab"
         )
 
@@ -192,14 +288,14 @@ with tab1:
         st.markdown("**Contacts Sheet**")
         contacts_url = st.text_input(
             "Contacts Sheet URL",
-            value=config.get("google_sheets_config", {}).get("contacts", {}).get("sheet_url", ""),
+            value=get_nested_config(config, "google_sheets_config", "contacts", "sheet_url"),
             placeholder="Paste your Google Sheets URL here...",
             key="contacts_url",
             label_visibility="collapsed"
         )
         contacts_tab = st.text_input(
             "Tab Name",
-            value=config.get("google_sheets_config", {}).get("contacts", {}).get("tab_name", "Sheet1"),
+            value=get_nested_config(config, "google_sheets_config", "contacts", "tab_name", default="Sheet1"),
             key="contacts_tab"
         )
 
@@ -221,16 +317,10 @@ with tab1:
     with col1:
         if st.button("💾 Save Configuration", use_container_width=True, type="secondary"):
             # Update config
-            config["google_sheets_config"]["messages"]["sheet_url"] = messages_url
-            config["google_sheets_config"]["messages"]["tab_name"] = messages_tab
-            config["google_sheets_config"]["contacts"]["sheet_url"] = contacts_url
-            config["google_sheets_config"]["contacts"]["tab_name"] = contacts_tab
-            config["default_delay"] = default_delay
+            update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
 
-            # Save to file
-            save_config(config)
-            st.session_state.config = config
-            st.success("✅ Configuration saved successfully!")
+            # Save to file and update session
+            save_and_update_session(config, "✅ Configuration saved successfully!")
 
     with col2:
         if st.button("⚡ Launch Strike", use_container_width=True, type="primary"):
@@ -239,13 +329,8 @@ with tab1:
                 st.error("🚫 Strike aborted! Enter Google Sheets URLs first.")
             else:
                 # Auto-save config before launching
-                config["google_sheets_config"]["messages"]["sheet_url"] = messages_url
-                config["google_sheets_config"]["messages"]["tab_name"] = messages_tab
-                config["google_sheets_config"]["contacts"]["sheet_url"] = contacts_url
-                config["google_sheets_config"]["contacts"]["tab_name"] = contacts_tab
-                config["default_delay"] = default_delay
-                save_config(config)
-                st.session_state.config = config
+                update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
+                save_and_update_session(config)
 
                 # Show saving confirmation
                 with st.spinner("⚙️ Preparing strike..."):
@@ -254,14 +339,11 @@ with tab1:
 
                 # Launch terminal with the broadcaster
                 try:
-                    if platform.system() == "Windows":
-                        subprocess.Popen(['start', 'cmd', '/k', 'python', 'src/wa_broadcaster.py', '--config', 'config.json'], shell=True)
-                    elif platform.system() == "Darwin":  # macOS
-                        script_path = os.path.abspath('src/wa_broadcaster.py')
-                        config_path = os.path.abspath('config.json')
-                        subprocess.Popen(['osascript', '-e', f'tell application "Terminal" to do script "cd {os.getcwd()} && python3 {script_path} --config {config_path}"'])
-                    else:  # Linux
-                        subprocess.Popen(['x-terminal-emulator', '-e', 'python3', 'src/wa_broadcaster.py', '--config', 'config.json'])
+                    script_path = os.path.abspath('src/wa_broadcaster.py')
+                    config_path = os.path.abspath('config.json')
+
+                    process = launch_terminal_process(script_path, config_path)
+                    st.session_state.process = process
 
                     st.success("⚡ Strike launched! Terminal opened. Unleash with honor, SPAMURAI!")
                 except Exception as e:
@@ -276,7 +358,7 @@ with tab2:
 
     followup_enabled = st.checkbox(
         "Enable followup messages",
-        value=config.get("followup_config", {}).get("enabled", True),
+        value=get_nested_config(config, "followup_config", "enabled", default=True),
         help="Send a second message immediately after the first"
     )
 
@@ -284,7 +366,7 @@ with tab2:
         "Followup delay (seconds)",
         min_value=1,
         max_value=60,
-        value=config.get("followup_config", {}).get("delay_seconds", 3),
+        value=get_nested_config(config, "followup_config", "delay_seconds", default=3),
         help="Time to wait before sending the followup message"
     )
 
@@ -341,9 +423,7 @@ with tab2:
             str(timeout_2_msg): timeout_2_min
         }
 
-        save_config(config)
-        st.session_state.config = config
-        st.success("✅ Advanced settings saved successfully!")
+        save_and_update_session(config, "✅ Advanced settings saved successfully!")
 
 # ============================================================================
 # TAB 3: About

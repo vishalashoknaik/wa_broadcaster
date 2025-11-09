@@ -27,43 +27,73 @@ class WhatsAppOrchestrator:
         with open(path) as f:
             return json.load(f)
 
-    def _load_messages(self):
-        """Load message pools from Google Sheets"""
+    def _fetch_from_google_sheets(self, config_key, config_name):
+        """Generic method to fetch data from Google Sheets
+
+        Args:
+            config_key: Key in google_sheets_config (e.g., 'messages', 'contacts')
+            config_name: Display name for error messages
+
+        Returns:
+            Tuple of (rows, sheet_url, tab_name, available_sheets)
+        """
         try:
             gs_config = self.config.get('google_sheets_config', {})
-            messages_config = gs_config.get('messages', {})
+            sheet_config = gs_config.get(config_key, {})
 
-            # Download from Google Sheets
             sheets_client = GoogleSheetsClient(self.tracker.logger)
 
-            sheet_url = messages_config.get('sheet_url')
-            tab_name = messages_config.get('tab_name')
+            sheet_url = sheet_config.get('sheet_url')
+            tab_name = sheet_config.get('tab_name')
 
             if not sheet_url or not tab_name:
-                raise Exception("Messages config must have 'sheet_url' and 'tab_name'")
+                raise Exception(f"{config_name} config must have 'sheet_url' and 'tab_name'")
 
             rows, available_sheets = sheets_client.fetch_messages_by_tab_name(sheet_url, tab_name)
 
-            # Parse into MessagePools (separate first/followup pools)
-            pools = message_parser.parse_from_google_sheets(rows)
-
-            # Store for preview
-            self.messages_preview_data = {
-                'sheet_url': sheet_url,
-                'tab_name': tab_name,
-                'available_sheets': available_sheets,
-                'rows': rows[:2],  # First 2 rows for preview
-                'headers': ['First Messages', 'Followup Messages']
-            }
-
-            self.tracker.logger.info(
-                f"✅ Loaded {len(pools.first_messages)} first messages, "
-                f"{len(pools.followup_messages)} followup messages from Google Sheets"
-            )
-            return pools
+            return rows, sheet_url, tab_name, available_sheets
 
         except Exception as e:
-            raise Exception(f"Failed to load messages: {str(e)}")
+            raise Exception(f"Failed to fetch {config_name}: {str(e)}")
+
+    def _store_preview_data(self, attr_name, sheet_url, tab_name, available_sheets, rows, headers):
+        """Store preview data for a sheet
+
+        Args:
+            attr_name: Attribute name to store data (e.g., 'messages_preview_data')
+            sheet_url: Google Sheets URL
+            tab_name: Tab name
+            available_sheets: List of available sheet names
+            rows: Data rows
+            headers: Column headers for display
+        """
+        setattr(self, attr_name, {
+            'sheet_url': sheet_url,
+            'tab_name': tab_name,
+            'available_sheets': available_sheets,
+            'rows': rows[:2],  # First 2 rows for preview
+            'headers': headers
+        })
+
+    def _load_messages(self):
+        """Load message pools from Google Sheets"""
+        rows, sheet_url, tab_name, available_sheets = self._fetch_from_google_sheets('messages', 'Messages')
+
+        # Parse into MessagePools (separate first/followup pools)
+        pools = message_parser.parse_from_google_sheets(rows)
+
+        # Store for preview
+        self._store_preview_data(
+            'messages_preview_data',
+            sheet_url, tab_name, available_sheets, rows,
+            ['First Messages', 'Followup Messages']
+        )
+
+        self.tracker.logger.info(
+            f"✅ Loaded {len(pools.first_messages)} first messages, "
+            f"{len(pools.followup_messages)} followup messages from Google Sheets"
+        )
+        return pools
 
     def _get_random_message_combination(self, nick_name):
         """Select random first message and random followup message independently
@@ -97,49 +127,31 @@ class WhatsAppOrchestrator:
 
     def _get_contacts(self):
         """Load contacts from Google Sheets"""
-        try:
-            gs_config = self.config.get('google_sheets_config', {})
-            contacts_config = gs_config.get('contacts', {})
+        rows, sheet_url, tab_name, available_sheets = self._fetch_from_google_sheets('contacts', 'Contacts')
 
-            # Download from Google Sheets
-            sheets_client = GoogleSheetsClient(self.tracker.logger)
+        # Store for preview
+        self._store_preview_data(
+            'contacts_preview_data',
+            sheet_url, tab_name, available_sheets, rows,
+            ['Name', 'WhatsApp Number', 'nick_name']
+        )
 
-            sheet_url = contacts_config.get('sheet_url')
-            tab_name = contacts_config.get('tab_name')
+        # Parse contacts
+        contacts = []
+        for row in rows:
+            if len(row) >= 2:  # At minimum need name and number
+                name = row[0] if len(row) > 0 else ""
+                number = row[1] if len(row) > 1 else ""
+                nick_name = row[2] if len(row) > 2 else " "
+                if name and number:
+                    # Normalize number
+                    number = str(number).strip().replace('.0', '')
+                    contacts.append((name, number, nick_name))
 
-            if not sheet_url or not tab_name:
-                raise Exception("Contacts config must have 'sheet_url' and 'tab_name'")
-
-            rows, available_sheets = sheets_client.fetch_messages_by_tab_name(sheet_url, tab_name)
-
-            # Store for preview
-            self.contacts_preview_data = {
-                'sheet_url': sheet_url,
-                'tab_name': tab_name,
-                'available_sheets': available_sheets,
-                'rows': rows[:2],  # First 2 rows for preview
-                'headers': ['Name', 'WhatsApp Number', 'nick_name']
-            }
-
-            # Parse contacts
-            contacts = []
-            for row in rows:
-                if len(row) >= 2:  # At minimum need name and number
-                    name = row[0] if len(row) > 0 else ""
-                    number = row[1] if len(row) > 1 else ""
-                    nick_name = row[2] if len(row) > 2 else " "
-                    if name and number:
-                        # Normalize number
-                        number = str(number).strip().replace('.0', '')
-                        contacts.append((name, number, nick_name))
-
-            self.tracker.logger.info(
-                f"✅ Loaded {len(contacts)} contacts from Google Sheets"
-            )
-            return contacts
-
-        except Exception as e:
-            raise Exception(f"Failed to load contacts: {str(e)}")
+        self.tracker.logger.info(
+            f"✅ Loaded {len(contacts)} contacts from Google Sheets"
+        )
+        return contacts
 
     def _track_combination_usage(self, first_idx, followup_idx):
         """Track which message combinations were used"""
@@ -148,6 +160,31 @@ class WhatsAppOrchestrator:
         else:
             key = f"First {first_idx} (no followup)"
         self.combination_usage[key] = self.combination_usage.get(key, 0) + 1
+
+    def _print_pool_stats(self, pool_name, key_prefix, key_filter):
+        """Generic method to print usage statistics for a message pool
+
+        Args:
+            pool_name: Display name (e.g., "First Message", "Followup Message")
+            key_prefix: Prefix to extract number from key (e.g., "First ", "Followup ")
+            key_filter: Function to filter relevant keys
+        """
+        stats = {}
+        for key, count in self.combination_usage.items():
+            if key_filter(key):
+                # Extract number from key
+                if key_prefix in key:
+                    parts = key.split(key_prefix)
+                    if len(parts) > 1:
+                        num = parts[1].split()[0]  # Get first word after prefix
+                        stats[num] = stats.get(num, 0) + count
+
+        if stats:
+            print(f"\n  {pool_name} Usage:")
+            for num in sorted(stats.keys(), key=lambda x: int(x)):
+                count = stats[num]
+                pct = (count / self.tracker.sent_count * 100) if self.tracker.sent_count > 0 else 0
+                print(f"    {pool_name} {num}: {count} times ({pct:.1f}%)")
 
     def _print_summary(self):
         """Print campaign summary with combination usage statistics"""
@@ -184,32 +221,18 @@ class WhatsAppOrchestrator:
             print(f"\n📊 Pool Usage Analysis:")
 
             # First message stats
-            first_stats = {}
-            for key, count in self.combination_usage.items():
-                if key.startswith("First "):
-                    first_num = key.split()[1]
-                    first_stats[first_num] = first_stats.get(first_num, 0) + count
-
-            if first_stats:
-                print(f"\n  First Message Usage:")
-                for first_num in sorted(first_stats.keys(), key=lambda x: int(x)):
-                    count = first_stats[first_num]
-                    pct = (count / self.tracker.sent_count * 100) if self.tracker.sent_count > 0 else 0
-                    print(f"    First {first_num}: {count} times ({pct:.1f}%)")
+            self._print_pool_stats(
+                "First",
+                "First ",
+                lambda key: key.startswith("First ")
+            )
 
             # Followup message stats
-            followup_stats = {}
-            for key, count in self.combination_usage.items():
-                if "Followup" in key and "no followup" not in key:
-                    followup_num = key.split("Followup ")[1]
-                    followup_stats[followup_num] = followup_stats.get(followup_num, 0) + count
-
-            if followup_stats:
-                print(f"\n  Followup Message Usage:")
-                for followup_num in sorted(followup_stats.keys(), key=lambda x: int(x)):
-                    count = followup_stats[followup_num]
-                    pct = (count / self.tracker.sent_count * 100) if self.tracker.sent_count > 0 else 0
-                    print(f"    Followup {followup_num}: {count} times ({pct:.1f}%)")
+            self._print_pool_stats(
+                "Followup",
+                "Followup ",
+                lambda key: "Followup" in key and "no followup" not in key
+            )
 
             # No followup count
             no_followup = sum(count for key, count in self.combination_usage.items() if "no followup" in key)
@@ -218,6 +241,27 @@ class WhatsAppOrchestrator:
 
         print("\n" + "="*70 + "\n")
 
+    def _print_sheet_preview(self, title, emoji, preview_data_attr):
+        """Print preview of a single Google Sheet
+
+        Args:
+            title: Display title (e.g., "MESSAGES SHEET")
+            emoji: Emoji prefix (e.g., "📋", "👥")
+            preview_data_attr: Attribute name containing preview data
+        """
+        if hasattr(self, preview_data_attr):
+            preview_data = getattr(self, preview_data_attr)
+            print(f"\n{emoji} {title}:")
+            print(f"URL: {preview_data['sheet_url']}")
+            print(f"Tab: {preview_data['tab_name']}")
+            print(f"Available tabs: {', '.join(preview_data['available_sheets'])}")
+            print(f"\nShowing first 2 rows:")
+            print_table(
+                preview_data['headers'],
+                preview_data['rows'],
+                max_rows=2
+            )
+
     def _preview_sheets(self):
         """Display preview of messages and contacts sheets for user verification"""
         print("\n" + "="*70)
@@ -225,30 +269,10 @@ class WhatsAppOrchestrator:
         print("="*70)
 
         # Messages preview
-        if hasattr(self, 'messages_preview_data'):
-            print("\n📋 MESSAGES SHEET:")
-            print(f"URL: {self.messages_preview_data['sheet_url']}")
-            print(f"Tab: {self.messages_preview_data['tab_name']}")
-            print(f"Available tabs: {', '.join(self.messages_preview_data['available_sheets'])}")
-            print(f"\nShowing first 2 rows:")
-            print_table(
-                self.messages_preview_data['headers'],
-                self.messages_preview_data['rows'],
-                max_rows=2
-            )
+        self._print_sheet_preview("MESSAGES SHEET", "📋", "messages_preview_data")
 
         # Contacts preview
-        if hasattr(self, 'contacts_preview_data'):
-            print("\n👥 CONTACTS SHEET:")
-            print(f"URL: {self.contacts_preview_data['sheet_url']}")
-            print(f"Tab: {self.contacts_preview_data['tab_name']}")
-            print(f"Available tabs: {', '.join(self.contacts_preview_data['available_sheets'])}")
-            print(f"\nShowing first 2 rows:")
-            print_table(
-                self.contacts_preview_data['headers'],
-                self.contacts_preview_data['rows'],
-                max_rows=2
-            )
+        self._print_sheet_preview("CONTACTS SHEET", "👥", "contacts_preview_data")
 
         print("\n" + "="*70)
         print("⚠️  PLEASE VERIFY THE DATA ABOVE MATCHES YOUR GOOGLE SHEETS")
@@ -266,137 +290,170 @@ class WhatsAppOrchestrator:
                 )
                 time.sleep(wait_min * 60)
 
+    def _handle_rate_limit(self, result):
+        """Check for rate limiting and handle appropriately
+
+        Args:
+            result: Result from send_exact_message
+
+        Returns:
+            True if rate limited (should stop), False otherwise
+        """
+        if "RATE LIMIT DETECTED" in str(result):
+            self.tracker.logger.error("⚠️ CRITICAL: Rate limit detected! Stopping to protect account.")
+            self.tracker.logger.error("⚠️ Wait at least 24 hours before resuming.")
+            return True
+        return False
+
+    def _cleanup(self):
+        """Clean up all resources (WebDriver, logging handlers)"""
+        try:
+            if hasattr(self, 'messenger'):
+                self.messenger.quit()
+        except Exception as e:
+            print(f"Warning: Error cleaning up messenger: {e}", file=sys.stderr)
+
+        try:
+            if hasattr(self, 'tracker'):
+                self.tracker.cleanup()
+        except Exception as e:
+            print(f"Warning: Error cleaning up tracker: {e}", file=sys.stderr)
+
     def run(self):
-        if not self.messenger.login():
+        try:
+            if not self.messenger.login():
+                print("", flush=True)
+                input("Scan QR Code then press Enter...\n\n")
+
+            contacts = self._get_contacts()
+            excluded = self.tracker.get_excluded_numbers()
+            sent = self.tracker.get_already_sent()
+
+            # Show preview of Google Sheets data if available
+            if hasattr(self, 'messages_preview_data') or hasattr(self, 'contacts_preview_data'):
+                self._preview_sheets()
+                response = input('Do the sheets above look correct? Type "YES" to continue or "NO" to cancel: ')
+                if response.upper() != 'YES':
+                    print("Campaign cancelled by user.")
+                    self._cleanup()
+                    sys.exit(0)
+
             print("", flush=True)
-            input("Scan QR Code then press Enter...\n\n")
+            ph_num = input('Enter your phone number to send test message: ')
+            nick_name = input('Enter nick_name: ')
+            print('Sending test message to', ph_num, flush=True)
+            random_sleep(1)
 
-        contacts = self._get_contacts()
-        excluded = self.tracker.get_excluded_numbers()
-        sent = self.tracker.get_already_sent()
+            # Get random combination for test
+            first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup = self._get_random_message_combination(nick_name)
 
-        # Show preview of Google Sheets data if available
-        if hasattr(self, 'messages_preview_data') or hasattr(self, 'contacts_preview_data'):
-            self._preview_sheets()
-            response = input('Do the sheets above look correct? Type "YES" to continue or "NO" to cancel: ')
-            if response.upper() != 'YES':
-                print("Campaign cancelled by user.")
-                sys.exit(0)
+            print('\n' + '='*60)
+            if followup_idx:
+                print(f'TEST MESSAGE PREVIEW [First {first_idx}/{total_first} + Followup {followup_idx}/{total_followup}]')
+            else:
+                print(f'TEST MESSAGE PREVIEW [First {first_idx}/{total_first}]')
+            print('='*60)
+            print(f'FIRST MESSAGE (variant {first_idx}):')
+            print(first_msg)
 
-        print("", flush=True)
-        ph_num = input('Enter your phone number to send test message: ')
-        nick_name = input('Enter nick_name: ')
-        print('Sending test message to', ph_num, flush=True)
-        random_sleep(1)
+            followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
+            if followup_enabled and followup_msg:
+                delay = self.config['followup_config'].get('delay_seconds', 3)
+                print(f'\nFOLLOWUP MESSAGE (variant {followup_idx}) (after {delay}s):')
+                print(followup_msg)
+            print('='*60 + '\n')
 
-        # Get random combination for test
-        first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup = self._get_random_message_combination(nick_name)
-
-        print('\n' + '='*60)
-        if followup_idx:
-            print(f'TEST MESSAGE PREVIEW [First {first_idx}/{total_first} + Followup {followup_idx}/{total_followup}]')
-        else:
-            print(f'TEST MESSAGE PREVIEW [First {first_idx}/{total_first}]')
-        print('='*60)
-        print(f'FIRST MESSAGE (variant {first_idx}):')
-        print(first_msg)
-
-        followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
-        if followup_enabled and followup_msg:
-            delay = self.config['followup_config'].get('delay_seconds', 3)
-            print(f'\nFOLLOWUP MESSAGE (variant {followup_idx}) (after {delay}s):')
-            print(followup_msg)
-        print('='*60 + '\n')
-
-        # Send first message
-        result = self.messenger.send_exact_message(ph_num, first_msg)
-        if result is not True:
-            print(f'❌ Failed to send first message: {result}')
-            sys.exit(-1)
-
-        print('✅ First message sent!')
-
-        # Send followup if enabled
-        if followup_enabled and followup_msg:
-            print(f'Waiting {delay} seconds before sending followup...')
-            time.sleep(delay)
-            result2 = self.messenger.send_exact_message(ph_num, followup_msg)
-            if result2 is not True:
-                print(f'❌ Failed to send followup message: {result2}')
+            # Send first message
+            result = self.messenger.send_exact_message(ph_num, first_msg)
+            if result is not True:
+                print(f'❌ Failed to send first message: {result}')
+                self._cleanup()
                 sys.exit(-1)
-            print('✅ Followup message sent!')
 
-        print('\nVerify the message(s) sent to your phone number and confirm.')
-        print('Also check if your config file is correct.')
-        response = input('Input "Yes" if messages are fine, else "No" to cancel: ')
-        if response.upper() != 'YES':
-            sys.exit(-1)
+            print('✅ First message sent!')
 
-        for name, number, nick_name in contacts:
-            if normalize_phone(number) in excluded:
-                self.tracker.logger.info(f"SKIPPED (excluded): {number}")
-                continue
+            # Send followup if enabled
+            if followup_enabled and followup_msg:
+                print(f'Waiting {delay} seconds before sending followup...')
+                time.sleep(delay)
+                result2 = self.messenger.send_exact_message(ph_num, followup_msg)
+                if result2 is not True:
+                    print(f'❌ Failed to send followup message: {result2}')
+                    self._cleanup()
+                    sys.exit(-1)
+                print('✅ Followup message sent!')
 
-            if normalize_phone(number) in sent:
-                self.tracker.logger.info(f"SKIPPED (already sent): {number}")
-                continue
+            print('\nVerify the message(s) sent to your phone number and confirm.')
+            print('Also check if your config file is correct.')
+            response = input('Input "Yes" if messages are fine, else "No" to cancel: ')
+            if response.upper() != 'YES':
+                self._cleanup()
+                sys.exit(-1)
 
-            try:
-                # Get random message combination
-                first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup = self._get_random_message_combination(nick_name)
-
-                # Send first message
-                result = self.messenger.send_exact_message(number, first_msg)
-                if result is not True:
-                    self.tracker.record_failure(name, number, f"First message failed: {result}")
-
-                    # Critical: Stop if rate limited to avoid account ban
-                    if "RATE LIMIT DETECTED" in str(result):
-                        self.tracker.logger.error("⚠️ CRITICAL: Rate limit detected! Stopping to protect account.")
-                        self.tracker.logger.error("⚠️ Wait at least 24 hours before resuming.")
-                        break
+            for name, number, nick_name in contacts:
+                if normalize_phone(number) in excluded:
+                    self.tracker.logger.info(f"SKIPPED (excluded): {number}")
                     continue
 
-                # Send followup if enabled and exists
-                followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
-                if followup_enabled and followup_msg:
-                    delay = self.config['followup_config'].get('delay_seconds', 3)
-                    time.sleep(delay)
+                if normalize_phone(number) in sent:
+                    self.tracker.logger.info(f"SKIPPED (already sent): {number}")
+                    continue
 
-                    result2 = self.messenger.send_exact_message(number, followup_msg)
-                    if result2 is not True:
-                        self.tracker.record_failure(name, number, f"Followup failed: {result2}")
+                try:
+                    # Get random message combination
+                    first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup = self._get_random_message_combination(nick_name)
 
-                        if "RATE LIMIT DETECTED" in str(result2):
-                            self.tracker.logger.error("⚠️ CRITICAL: Rate limit detected! Stopping to protect account.")
-                            self.tracker.logger.error("⚠️ Wait at least 24 hours before resuming.")
+                    # Send first message
+                    result = self.messenger.send_exact_message(number, first_msg)
+                    if result is not True:
+                        self.tracker.record_failure(name, number, f"First message failed: {result}")
+
+                        # Critical: Stop if rate limited to avoid account ban
+                        if self._handle_rate_limit(result):
                             break
                         continue
 
-                # Both succeeded (or only first if no followup)
-                if followup_idx:
-                    combo_info = f"First {first_idx}/{total_first} + Followup {followup_idx}/{total_followup}"
-                else:
-                    combo_info = f"First {first_idx}/{total_first}"
-                self.tracker.record_success(name, number, combo_info)
+                    # Send followup if enabled and exists
+                    followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
+                    if followup_enabled and followup_msg:
+                        delay = self.config['followup_config'].get('delay_seconds', 3)
+                        time.sleep(delay)
 
-                # Track combination usage for summary
-                self._track_combination_usage(first_idx, followup_idx)
+                        result2 = self.messenger.send_exact_message(number, followup_msg)
+                        if result2 is not True:
+                            self.tracker.record_failure(name, number, f"Followup failed: {result2}")
 
-                self._check_timeout()
-                random_sleep(self.config['default_delay'])
+                            if self._handle_rate_limit(result2):
+                                break
+                            continue
 
-            except Exception as e:
-                self.tracker.logger.error(f"CRITICAL ERROR: {str(e)}")
-                break
+                    # Both succeeded (or only first if no followup)
+                    if followup_idx:
+                        combo_info = f"First {first_idx}/{total_first} + Followup {followup_idx}/{total_followup}"
+                    else:
+                        combo_info = f"First {first_idx}/{total_first}"
+                    self.tracker.record_success(name, number, combo_info)
 
-        self.messenger.quit()
-        self.tracker.logger.info(
-            f"COMPLETED. Total messages sent: {self.tracker.sent_count}"
-        )
+                    # Track combination usage for summary
+                    self._track_combination_usage(first_idx, followup_idx)
 
-        # Print summary report
-        self._print_summary()
+                    self._check_timeout()
+                    random_sleep(self.config['default_delay'])
+
+                except Exception as e:
+                    self.tracker.logger.error(f"CRITICAL ERROR: {str(e)}")
+                    break
+
+            self.tracker.logger.info(
+                f"COMPLETED. Total messages sent: {self.tracker.sent_count}"
+            )
+
+            # Print summary report
+            self._print_summary()
+
+        finally:
+            # Always cleanup resources regardless of how we exit
+            self._cleanup()
 
 
 if __name__ == "__main__":
