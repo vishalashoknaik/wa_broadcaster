@@ -4,6 +4,8 @@ import tempfile
 import os
 import logging
 import re
+import time
+import platform
 from requests.exceptions import SSLError
 
 class GoogleSheetsClient:
@@ -11,6 +13,33 @@ class GoogleSheetsClient:
 
     def __init__(self, logger=None):
         self.logger = logger or logging.getLogger(__name__)
+
+    @staticmethod
+    def _safe_remove_temp_file(tmp_path, max_retries=3):
+        """
+        Safely remove temp file with retry logic for Windows file locking
+
+        Args:
+            tmp_path: Path to temporary file
+            max_retries: Number of retry attempts
+        """
+        for attempt in range(max_retries):
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+                return  # Success
+            except (PermissionError, OSError) as e:
+                if attempt < max_retries - 1:
+                    # Wait a bit and retry (Windows file locking issue)
+                    time.sleep(0.1 * (attempt + 1))
+                else:
+                    # Last attempt failed, log warning but don't crash
+                    # The temp file will be cleaned up by OS eventually
+                    if platform.system() == "Windows":
+                        # This is expected on Windows sometimes
+                        pass
+                    else:
+                        raise
 
     @staticmethod
     def extract_spreadsheet_id(sheet_url):
@@ -65,7 +94,7 @@ class GoogleSheetsClient:
                 sheet_names = excel_file.sheet_names
 
                 # Clean up
-                os.remove(tmp_path)
+                self._safe_remove_temp_file(tmp_path)
 
                 # Note: We can't get the actual Google Sheet title or GIDs from Excel export
                 # The Excel file only has sheet names, not GIDs
@@ -78,7 +107,7 @@ class GoogleSheetsClient:
 
             except Exception as e:
                 if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
+                    self._safe_remove_temp_file(tmp_path)
                 raise e
 
         except Exception as e:
@@ -138,7 +167,7 @@ class GoogleSheetsClient:
                 available_sheets = excel_file.sheet_names
 
                 # Clean up
-                os.remove(tmp_path)
+                self._safe_remove_temp_file(tmp_path)
 
                 if not rows:
                     raise Exception(f"Tab '{tab_name}' is empty")
@@ -151,7 +180,7 @@ class GoogleSheetsClient:
                 # Sheet name not found
                 excel_file = pd.ExcelFile(tmp_path)
                 available_sheets = excel_file.sheet_names
-                os.remove(tmp_path)
+                self._safe_remove_temp_file(tmp_path)
 
                 raise Exception(
                     f"Tab '{tab_name}' not found.\n"
@@ -159,7 +188,7 @@ class GoogleSheetsClient:
                 )
             except Exception as e:
                 if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
+                    self._safe_remove_temp_file(tmp_path)
                 raise e
 
         except Exception as e:
@@ -218,7 +247,7 @@ class GoogleSheetsClient:
                     rows.append(row_data)
 
                 # Clean up temp file
-                os.remove(tmp_path)
+                self._safe_remove_temp_file(tmp_path)
 
                 if not rows:
                     raise Exception("Google Sheet is empty")
@@ -230,7 +259,7 @@ class GoogleSheetsClient:
             except Exception as e:
                 # Clean up temp file on error
                 if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
+                    self._safe_remove_temp_file(tmp_path)
                 raise e
 
         except requests.exceptions.Timeout:
