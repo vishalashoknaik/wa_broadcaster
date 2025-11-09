@@ -44,6 +44,7 @@ class WhatsAppMessenger:
         options.add_argument("--disable-extensions")
         # Let Chrome choose a random debug port to avoid conflicts
         options.add_argument("--remote-debugging-port=0")
+        options.add_argument("--log-level=3")
 
         try:
             self.driver = webdriver.Chrome(
