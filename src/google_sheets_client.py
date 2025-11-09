@@ -13,6 +13,13 @@ class GoogleSheetsClient:
 
     def __init__(self, logger=None):
         self.logger = logger or logging.getLogger(__name__)
+        # Use requests.Session for connection pooling and better performance
+        self.session = requests.Session()
+
+    def __del__(self):
+        """Clean up resources on deletion"""
+        if hasattr(self, 'session'):
+            self.session.close()
 
     @staticmethod
     def _safe_remove_temp_file(tmp_path, max_retries=3):
@@ -65,6 +72,114 @@ class GoogleSheetsClient:
 
         raise ValueError(f"Could not extract spreadsheet ID from URL: {sheet_url}")
 
+    def _build_export_url(self, spreadsheet_id):
+        """Build Google Sheets Excel export URL
+
+        Args:
+            spreadsheet_id: Google Sheets spreadsheet ID
+
+        Returns:
+            Export URL string
+        """
+        return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=xlsx"
+
+    def _download_with_ssl_retry(self, url, log_messages=True):
+        """Download URL with SSL error retry logic
+
+        Args:
+            url: URL to download
+            log_messages: Whether to log download messages
+
+        Returns:
+            requests.Response object
+
+        Raises:
+            requests.exceptions.RequestException on failure
+        """
+        try:
+            if log_messages:
+                self.logger.info("Downloading with SSL verification...")
+            response = self.session.get(url, timeout=30)
+            response.raise_for_status()
+            return response
+        except SSLError:
+            if log_messages:
+                self.logger.warning("SSL verification failed. Retrying without verification...")
+            response = self.session.get(url, verify=False, timeout=30)
+            response.raise_for_status()
+            return response
+
+    def _save_response_to_temp_file(self, response):
+        """Save HTTP response content to temporary Excel file
+
+        Args:
+            response: requests.Response object with Excel content
+
+        Returns:
+            Path to temporary file
+        """
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            tmp_file.write(response.content)
+            return tmp_file.name
+
+    def _download_excel(self, spreadsheet_id, log_messages=True):
+        """Download Google Sheets as Excel file
+
+        Args:
+            spreadsheet_id: Google Sheets spreadsheet ID
+            log_messages: Whether to log download messages
+
+        Returns:
+            Path to temporary Excel file
+        """
+        url = self._build_export_url(spreadsheet_id)
+        response = self._download_with_ssl_retry(url, log_messages)
+        return self._save_response_to_temp_file(response)
+
+    def _dataframe_to_rows(self, df):
+        """Convert pandas DataFrame to list of rows
+
+        Args:
+            df: pandas DataFrame
+
+        Returns:
+            List of rows, where each row is a list of string values
+        """
+        rows = []
+        for _, row in df.iterrows():
+            row_data = []
+            for i in range(len(df.columns)):
+                cell_value = row.iloc[i]
+                if pd.notna(cell_value):
+                    row_data.append(str(cell_value))
+                else:
+                    row_data.append("")
+            rows.append(row_data)
+        return rows
+
+    def _get_available_sheets(self, tmp_path):
+        """Get list of available sheet names from Excel file
+
+        Args:
+            tmp_path: Path to temporary Excel file
+
+        Returns:
+            List of sheet names
+        """
+        with pd.ExcelFile(tmp_path) as excel_file:
+            return excel_file.sheet_names
+
+    def _cleanup_temp_file_on_error(self, tmp_path, exception):
+        """Clean up temporary file and re-raise exception
+
+        Args:
+            tmp_path: Path to temporary file
+            exception: Exception to re-raise
+        """
+        if os.path.exists(tmp_path):
+            self._safe_remove_temp_file(tmp_path)
+        raise exception
+
     def get_sheet_metadata(self, spreadsheet_id):
         """
         Get sheet metadata including title and all tab names with GIDs
@@ -74,24 +189,11 @@ class GoogleSheetsClient:
         """
         try:
             # Download as Excel to get all sheets
-            url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=xlsx"
-
-            try:
-                response = requests.get(url, timeout=30)
-                response.raise_for_status()
-            except SSLError:
-                response = requests.get(url, verify=False, timeout=30)
-                response.raise_for_status()
-
-            # Save to temp file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
-                tmp_file.write(response.content)
-                tmp_path = tmp_file.name
+            tmp_path = self._download_excel(spreadsheet_id, log_messages=False)
 
             try:
                 # Read Excel file to get sheet names
-                excel_file = pd.ExcelFile(tmp_path)
-                sheet_names = excel_file.sheet_names
+                sheet_names = self._get_available_sheets(tmp_path)
 
                 # Clean up
                 self._safe_remove_temp_file(tmp_path)
@@ -106,9 +208,7 @@ class GoogleSheetsClient:
                 }
 
             except Exception as e:
-                if os.path.exists(tmp_path):
-                    self._safe_remove_temp_file(tmp_path)
-                raise e
+                self._cleanup_temp_file_on_error(tmp_path, e)
 
         except Exception as e:
             raise Exception(f"Failed to get sheet metadata: {str(e)}")
@@ -130,41 +230,17 @@ class GoogleSheetsClient:
 
         try:
             # Download entire workbook as Excel
-            url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=xlsx"
-
-            try:
-                self.logger.info("Downloading with SSL verification...")
-                response = requests.get(url, timeout=30)
-                response.raise_for_status()
-            except SSLError:
-                self.logger.warning("SSL verification failed. Retrying without verification...")
-                response = requests.get(url, verify=False, timeout=30)
-                response.raise_for_status()
-
-            # Save to temp file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
-                tmp_file.write(response.content)
-                tmp_path = tmp_file.name
+            tmp_path = self._download_excel(spreadsheet_id, log_messages=True)
 
             try:
                 # Read specific sheet by name
                 df = pd.read_excel(tmp_path, sheet_name=tab_name)
 
                 # Convert to list of rows
-                rows = []
-                for _, row in df.iterrows():
-                    row_data = []
-                    for i in range(len(df.columns)):
-                        cell_value = row.iloc[i]
-                        if pd.notna(cell_value):
-                            row_data.append(str(cell_value))
-                        else:
-                            row_data.append("")
-                    rows.append(row_data)
+                rows = self._dataframe_to_rows(df)
 
                 # Get available sheet names for error messaging
-                excel_file = pd.ExcelFile(tmp_path)
-                available_sheets = excel_file.sheet_names
+                available_sheets = self._get_available_sheets(tmp_path)
 
                 # Clean up
                 self._safe_remove_temp_file(tmp_path)
@@ -178,8 +254,7 @@ class GoogleSheetsClient:
 
             except ValueError as e:
                 # Sheet name not found
-                excel_file = pd.ExcelFile(tmp_path)
-                available_sheets = excel_file.sheet_names
+                available_sheets = self._get_available_sheets(tmp_path)
                 self._safe_remove_temp_file(tmp_path)
 
                 raise Exception(
@@ -187,9 +262,7 @@ class GoogleSheetsClient:
                     f"Available tabs: {', '.join(available_sheets)}"
                 )
             except Exception as e:
-                if os.path.exists(tmp_path):
-                    self._safe_remove_temp_file(tmp_path)
-                raise e
+                self._cleanup_temp_file_on_error(tmp_path, e)
 
         except Exception as e:
             raise Exception(f"Failed to download tab '{tab_name}': {str(e)}")
@@ -209,42 +282,17 @@ class GoogleSheetsClient:
             Exception: If download fails or sheet is not accessible
         """
         try:
-            # Construct Excel export URL (preserves formatting, newlines, emojis)
-            url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=xlsx"
-
             self.logger.info(f"Downloading messages from Google Sheets: {spreadsheet_id}")
 
-            # Download with timeout
-            try:
-                self.logger.info("Downloading with SSL verification...")
-                response = requests.get(url, timeout=30)
-                response.raise_for_status()
-            except SSLError:
-                self.logger.warning("SSL verification failed. Retrying without verification...")
-                response = requests.get(url, verify=False, timeout=30)
-                response.raise_for_status()
-
-            # Save to temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
-                tmp_file.write(response.content)
-                tmp_path = tmp_file.name
+            # Download entire workbook as Excel
+            tmp_path = self._download_excel(spreadsheet_id, log_messages=True)
 
             try:
                 # Read Excel file with pandas (preserves all formatting)
                 df = pd.read_excel(tmp_path, sheet_name=sheet_gid if sheet_gid > 0 else 0)
 
                 # Convert to list of rows
-                rows = []
-                for _, row in df.iterrows():
-                    row_data = []
-                    for i in range(len(df.columns)):
-                        cell_value = row.iloc[i]
-                        # Convert to string, handle NaN
-                        if pd.notna(cell_value):
-                            row_data.append(str(cell_value))
-                        else:
-                            row_data.append("")
-                    rows.append(row_data)
+                rows = self._dataframe_to_rows(df)
 
                 # Clean up temp file
                 self._safe_remove_temp_file(tmp_path)
@@ -257,10 +305,7 @@ class GoogleSheetsClient:
                 return rows
 
             except Exception as e:
-                # Clean up temp file on error
-                if os.path.exists(tmp_path):
-                    self._safe_remove_temp_file(tmp_path)
-                raise e
+                self._cleanup_temp_file_on_error(tmp_path, e)
 
         except requests.exceptions.Timeout:
             raise Exception("Timeout while downloading from Google Sheets. Check your internet connection.")
