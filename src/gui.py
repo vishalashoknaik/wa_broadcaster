@@ -220,12 +220,9 @@ def launch_terminal_process(script_path, config_path):
     """
     try:
         if platform.system() == "Windows":
-            # Note: shell=True is used here for Windows 'start' command compatibility
-            # Alternative without shell=True is more complex on Windows
-            process = subprocess.Popen(
-                ['start', 'cmd', '/k', 'python', script_path, '--config', config_path],
-                shell=True
-            )
+            # Use system command. Subprocess command is not responding properly
+            os.system(' '.join(['python', script_path, '--config', config_path]))
+
         elif platform.system() == "Darwin":  # macOS
             process = subprocess.Popen([
                 'osascript', '-e',
