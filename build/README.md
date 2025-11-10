@@ -2,6 +2,10 @@
 
 This directory contains all the tools and scripts needed to build native installers for SPAMURAI.
 
+> ⚠️ **IMPORTANT NOTE:** Native .app/.exe bundles have **limited functionality** with Streamlit applications due to Streamlit's web server architecture. The **Quick Launchers** (`../launchers/`) are the **recommended distribution method** for SPAMURAI as they provide full functionality and better user experience.
+>
+> This build system is provided for experimentation and future development, but is **not production-ready** for Streamlit-based applications.
+
 ---
 
 ## 🎯 What Gets Built
@@ -11,10 +15,16 @@ Located in `../launchers/`:
 - ✅ `SPAMURAI.bat` - Windows double-click launcher
 - ✅ `SPAMURAI.command` - macOS double-click launcher
 
-### Phase 2: Native Installers (This Directory)
+### Phase 2: Native Installers (This Directory) - ⚠️ EXPERIMENTAL
 Built using this directory:
-- 📦 `SPAMURAI-Setup.exe` - Windows installer with wizard
-- 📦 `SPAMURAI.app` - macOS application bundle
+- 📦 `SPAMURAI-Setup.exe` - Windows installer with wizard **(not fully functional)**
+- 📦 `SPAMURAI.app` - macOS application bundle **(not fully functional)**
+
+**Known Issues:**
+- Streamlit runs in "bare mode" when executed directly
+- Missing ScriptRunContext warnings
+- Web server doesn't start properly
+- **Use Quick Launchers instead for production**
 
 ---
 

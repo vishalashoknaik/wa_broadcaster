@@ -6,7 +6,7 @@ Complete hybrid launcher system for SPAMURAI - making it simple for everyone to 
 
 ## 🎯 Two-Phase Approach
 
-### Phase 1: Quick Launchers ✅ COMPLETE
+### Phase 1: Quick Launchers ✅ RECOMMENDED
 **Location:** `launchers/`
 
 Simple double-click scripts that handle everything:
@@ -14,24 +14,34 @@ Simple double-click scripts that handle everything:
 - ✅ Automatic virtual environment setup
 - ✅ Dependency auto-install
 - ✅ GUI launch
+- ✅ **Works perfectly with Streamlit**
 
 **Files:**
 - `launchers/SPAMURAI.bat` - Windows
 - `launchers/SPAMURAI.command` - macOS
 - `launchers/README.md` - User instructions
 
-### Phase 2: Native Installers ✅ COMPLETE
+**⭐ This is the recommended distribution method for SPAMURAI.**
+
+### Phase 2: Native Installers ⚠️ EXPERIMENTAL
 **Location:** `build/`
 
-Professional installer packages:
-- 📦 Windows: `SPAMURAI-Setup.exe` with Install Wizard
-- 📦 macOS: `SPAMURAI.app` application bundle
+> **Note:** Native .app/.exe bundles have limitations with Streamlit applications due to Streamlit's server architecture. Phase 1 (Quick Launchers) is the recommended approach for both developers and end users.
+
+Build system for creating standalone packages:
+- 📦 Windows: `SPAMURAI-Setup.exe` with Install Wizard (not fully functional)
+- 📦 macOS: `SPAMURAI.app` application bundle (not fully functional)
+
+**Known Limitations:**
+- Streamlit requires running as a web server, not a direct executable
+- PyInstaller bundles need complex wrapper scripts to work properly
+- Quick Launchers (Phase 1) provide better user experience
 
 **Files:**
 - `build/build.py` - Automated build script
-- `build/spamurai.spec` - PyInstaller configuration
+- `build/spamurai.spec` - PyInstaller configuration (metadata fixes included)
 - `build/installer.iss` - Windows installer config
-- `build/README.md` - Build instructions
+- `build/README.md` - Build instructions and limitations
 
 ---
 
@@ -39,31 +49,31 @@ Professional installer packages:
 
 ### Windows Users
 
-**Option A: Quick Launcher** (Developers)
+**Quick Launcher** (✅ Recommended)
 1. Download repository
 2. Double-click `launchers/SPAMURAI.bat`
-3. Wait for first-run setup
-4. GUI opens automatically
+3. Wait for first-run setup (first time only)
+4. GUI opens automatically in browser
 
-**Option B: Installer** (Recommended)
-1. Download `SPAMURAI-Setup.exe`
-2. Run installer wizard
-3. Click desktop shortcut or Start Menu
-4. Done!
+**Why this is the best option:**
+- ✅ No Python knowledge required
+- ✅ Automatic dependency installation
+- ✅ Works reliably with Streamlit
+- ✅ Easy to update (just git pull)
 
 ### macOS Users
 
-**Option A: Quick Launcher** (Developers)
+**Quick Launcher** (✅ Recommended)
 1. Download repository
 2. Double-click `launchers/SPAMURAI.command`
-3. Wait for first-run setup
-4. GUI opens automatically
+3. Wait for first-run setup (first time only)
+4. GUI opens automatically in browser
 
-**Option B: Application Bundle** (Recommended)
-1. Download `SPAMURAI.app.zip`
-2. Unzip and drag to Applications folder
-3. Double-click to launch
-4. Done!
+**Why this is the best option:**
+- ✅ No Python knowledge required
+- ✅ Automatic dependency installation
+- ✅ Works reliably with Streamlit
+- ✅ Easy to update (just git pull)
 
 ### Linux Users
 
@@ -111,12 +121,16 @@ See `build/README.md` for detailed build instructions.
 
 | Feature | Quick Launchers | Native Installers |
 |---------|----------------|-------------------|
-| **Setup Time** | 2-5 min first run | One-time install |
+| **Setup Time** | 2-5 min first run | N/A |
 | **File Size** | Small (~50KB scripts) | Large (~200MB+) |
 | **Requirements** | Python installed | Everything bundled |
-| **Updates** | git pull | Download new installer |
-| **Portability** | Needs Python | Self-contained |
-| **Best For** | Developers | End users |
+| **Updates** | git pull | N/A |
+| **Streamlit Compatibility** | ✅ Perfect | ⚠️ Limited |
+| **Reliability** | ✅ Tested & Working | ⚠️ Experimental |
+| **User Experience** | ✅ Smooth | ⚠️ Needs work |
+| **Best For** | Everyone! | Future consideration |
+
+**Recommendation:** Use Quick Launchers for all deployments. Native installers have architectural limitations with Streamlit.
 
 ---
 

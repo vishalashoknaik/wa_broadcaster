@@ -99,9 +99,9 @@ def build_executable():
     spec_file = build_dir / 'spamurai.spec'
 
     try:
-        # Run PyInstaller
+        # Run PyInstaller using python -m to avoid PATH issues
         result = subprocess.run(
-            ['pyinstaller', '--clean', str(spec_file)],
+            [sys.executable, '-m', 'PyInstaller', '--clean', str(spec_file)],
             cwd=build_dir.parent,
             capture_output=True,
             text=True
