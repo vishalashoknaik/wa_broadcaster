@@ -2,9 +2,9 @@
 
 This directory contains all the tools and scripts needed to build native installers for SPAMURAI.
 
-> ⚠️ **IMPORTANT NOTE:** Native .app/.exe bundles have **limited functionality** with Streamlit applications due to Streamlit's web server architecture. The **Quick Launchers** (`../launchers/`) are the **recommended distribution method** for SPAMURAI as they provide full functionality and better user experience.
+> ✅ **Status:** Fully functional! The build system now properly supports Streamlit applications using a launcher wrapper that invokes the Streamlit server correctly.
 >
-> This build system is provided for experimentation and future development, but is **not production-ready** for Streamlit-based applications.
+> Native installers are **recommended for non-technical users** who want zero-setup, professional application bundles.
 
 ---
 
@@ -15,16 +15,16 @@ Located in `../launchers/`:
 - ✅ `SPAMURAI.bat` - Windows double-click launcher
 - ✅ `SPAMURAI.command` - macOS double-click launcher
 
-### Phase 2: Native Installers (This Directory) - ⚠️ EXPERIMENTAL
+### Phase 2: Native Installers (This Directory) - ✅ WORKING
 Built using this directory:
-- 📦 `SPAMURAI-Setup.exe` - Windows installer with wizard **(not fully functional)**
-- 📦 `SPAMURAI.app` - macOS application bundle **(not fully functional)**
+- 📦 `SPAMURAI-Setup.exe` - Windows installer with wizard
+- 📦 `SPAMURAI.app` - macOS application bundle ✅ **Tested & Working**
 
-**Known Issues:**
-- Streamlit runs in "bare mode" when executed directly
-- Missing ScriptRunContext warnings
-- Web server doesn't start properly
-- **Use Quick Launchers instead for production**
+**How It Works:**
+- Uses `launcher.py` wrapper that properly invokes Streamlit CLI
+- Streamlit runs as a web server (not bare mode)
+- Browser opens automatically at http://localhost:8501
+- All dependencies bundled (~220MB total)
 
 ---
 

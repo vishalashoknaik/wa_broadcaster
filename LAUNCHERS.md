@@ -23,25 +23,32 @@ Simple double-click scripts that handle everything:
 
 **⭐ This is the recommended distribution method for SPAMURAI.**
 
-### Phase 2: Native Installers ⚠️ EXPERIMENTAL
+### Phase 2: Native Installers ✅ WORKING
 **Location:** `build/`
 
-> **Note:** Native .app/.exe bundles have limitations with Streamlit applications due to Streamlit's server architecture. Phase 1 (Quick Launchers) is the recommended approach for both developers and end users.
+Professional standalone application bundles with zero dependencies:
+- 📦 Windows: `SPAMURAI-Setup.exe` with Install Wizard
+- 📦 macOS: `SPAMURAI.app` application bundle ✅ **Tested & Working**
 
-Build system for creating standalone packages:
-- 📦 Windows: `SPAMURAI-Setup.exe` with Install Wizard (not fully functional)
-- 📦 macOS: `SPAMURAI.app` application bundle (not fully functional)
+**Key Features:**
+- ✅ Everything bundled (Python + all dependencies)
+- ✅ No Python installation required
+- ✅ Proper Streamlit server architecture (launcher wrapper)
+- ✅ Double-click to launch
+- ✅ No command-line knowledge needed
 
-**Known Limitations:**
-- Streamlit requires running as a web server, not a direct executable
-- PyInstaller bundles need complex wrapper scripts to work properly
-- Quick Launchers (Phase 1) provide better user experience
+**Technical Implementation:**
+- Uses `launcher.py` wrapper that invokes Streamlit CLI properly
+- Bundles `gui.py` and all dependencies via PyInstaller
+- Launches Streamlit web server correctly (not bare mode)
+- Browser opens automatically at http://localhost:8501
 
 **Files:**
+- `src/launcher.py` - Streamlit launcher wrapper (NEW!)
 - `build/build.py` - Automated build script
-- `build/spamurai.spec` - PyInstaller configuration (metadata fixes included)
+- `build/spamurai.spec` - PyInstaller configuration with launcher
 - `build/installer.iss` - Windows installer config
-- `build/README.md` - Build instructions and limitations
+- `build/README.md` - Build instructions
 
 ---
 
@@ -49,31 +56,43 @@ Build system for creating standalone packages:
 
 ### Windows Users
 
-**Quick Launcher** (✅ Recommended)
+**Option A: Quick Launcher** (For developers)
 1. Download repository
 2. Double-click `launchers/SPAMURAI.bat`
 3. Wait for first-run setup (first time only)
 4. GUI opens automatically in browser
 
-**Why this is the best option:**
-- ✅ No Python knowledge required
-- ✅ Automatic dependency installation
-- ✅ Works reliably with Streamlit
-- ✅ Easy to update (just git pull)
+**Option B: Native Installer** (✅ Recommended for non-technical users)
+1. Download `SPAMURAI-Setup.exe` from Releases
+2. Run installer wizard
+3. Click desktop shortcut or Start Menu
+4. GUI launches automatically
+
+**Option B Benefits:**
+- ✅ No Python or Git required
+- ✅ No command-line knowledge needed
+- ✅ Easy updates (download new version)
+- ✅ Uninstaller included
 
 ### macOS Users
 
-**Quick Launcher** (✅ Recommended)
+**Option A: Quick Launcher** (For developers)
 1. Download repository
 2. Double-click `launchers/SPAMURAI.command`
 3. Wait for first-run setup (first time only)
 4. GUI opens automatically in browser
 
-**Why this is the best option:**
-- ✅ No Python knowledge required
-- ✅ Automatic dependency installation
-- ✅ Works reliably with Streamlit
-- ✅ Easy to update (just git pull)
+**Option B: Native App Bundle** (✅ Recommended for non-technical users)
+1. Download `SPAMURAI.app.zip` from Releases
+2. Unzip and drag `SPAMURAI.app` to Applications folder
+3. Double-click to launch
+4. GUI opens automatically in browser
+
+**Option B Benefits:**
+- ✅ No Python or Git required
+- ✅ No command-line knowledge needed
+- ✅ Easy updates (download new version)
+- ✅ True macOS app experience
 
 ### Linux Users
 
@@ -121,16 +140,19 @@ See `build/README.md` for detailed build instructions.
 
 | Feature | Quick Launchers | Native Installers |
 |---------|----------------|-------------------|
-| **Setup Time** | 2-5 min first run | N/A |
-| **File Size** | Small (~50KB scripts) | Large (~200MB+) |
+| **Setup Time** | 2-5 min first run | Instant (just install/launch) |
+| **File Size** | Small (~50KB scripts) | Large (~220MB) |
 | **Requirements** | Python installed | Everything bundled |
-| **Updates** | git pull | N/A |
-| **Streamlit Compatibility** | ✅ Perfect | ⚠️ Limited |
-| **Reliability** | ✅ Tested & Working | ⚠️ Experimental |
-| **User Experience** | ✅ Smooth | ⚠️ Needs work |
-| **Best For** | Everyone! | Future consideration |
+| **Updates** | git pull | Download new version |
+| **Streamlit Compatibility** | ✅ Perfect | ✅ Perfect (with launcher wrapper) |
+| **Reliability** | ✅ Tested & Working | ✅ Tested & Working |
+| **User Experience** | ✅ Smooth | ✅ Professional |
+| **No Command Line** | ✅ Yes | ✅ Yes |
+| **Best For** | Developers | Non-technical users |
 
-**Recommendation:** Use Quick Launchers for all deployments. Native installers have architectural limitations with Streamlit.
+**Recommendation:**
+- **Developers:** Use Quick Launchers (easier to update via git)
+- **Non-technical users:** Use Native Installers (zero setup required)
 
 ---
 
