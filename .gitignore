@@ -26,8 +26,8 @@ build_temp/
 # macOS
 .DS_Store
 
-# Icons (users should generate their own)
-build/icon.ico
-build/icon.icns
+# Icon generation artifacts
 build/icon_source.png
 build/SPAMURAI.iconset/
+
+# Note: icon.ico and icon.icns are tracked for builds
