@@ -141,8 +141,8 @@ if sys.platform == 'darwin':
         info_plist={
             'CFBundleName': 'SPAMURAI',
             'CFBundleDisplayName': 'SPAMURAI',
-            'CFBundleShortVersionString': '1.9.0',
-            'CFBundleVersion': '1.9.0',
+            'CFBundleShortVersionString': '1.10.0',
+            'CFBundleVersion': '1.10.0',
             'LSMinimumSystemVersion': '10.13',
             'NSHighResolutionCapable': True,
             'NSRequiresAquaSystemAppearance': False,
