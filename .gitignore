@@ -1,6 +1,5 @@
 .idea
 /releases
-/build
 /dist
 /__pycache__
 /src/build
@@ -12,3 +11,23 @@
 /src/wa_broadcaster.spec
 config
 config.json
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Build artifacts
+build_temp/
+*.pyc
+*.pyo
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# Icons (users should generate their own)
+build/icon.ico
+build/icon.icns
+build/icon_source.png
+build/SPAMURAI.iconset/
