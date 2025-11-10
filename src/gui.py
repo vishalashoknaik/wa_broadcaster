@@ -220,11 +220,14 @@ def launch_terminal_process(script_path, config_path):
     """
     try:
         if platform.system() == "Windows":
-            # Note: shell=True is used here for Windows 'start' command compatibility
-            # Alternative without shell=True is more complex on Windows
+            # Use CREATE_NEW_CONSOLE flag to properly detach the process
+            # Close pipes to prevent deadlock when parent doesn't read them
             process = subprocess.Popen(
-                ['start', 'cmd', '/k', 'python', script_path, '--config', config_path],
-                shell=True
+                ['cmd', '/k', 'python', script_path, '--config', config_path],
+                creationflags=subprocess.CREATE_NEW_CONSOLE,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
         elif platform.system() == "Darwin":  # macOS
             process = subprocess.Popen([
