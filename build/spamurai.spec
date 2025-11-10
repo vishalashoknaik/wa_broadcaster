@@ -5,15 +5,36 @@ Builds standalone executable for Windows and macOS
 """
 
 import sys
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
-# Collect all Streamlit data files
+# Collect all Streamlit data files and metadata
 streamlit_data = collect_data_files('streamlit')
 streamlit_submodules = collect_submodules('streamlit')
+streamlit_metadata = copy_metadata('streamlit')
 
-# Collect all necessary packages
+# Helper function to safely copy metadata
+def safe_copy_metadata(package_name):
+    try:
+        return copy_metadata(package_name)
+    except:
+        return []
+
+# Collect all necessary packages with metadata
 altair_data = collect_data_files('altair')
-plotly_data = collect_data_files('plotly')
+altair_metadata = safe_copy_metadata('altair')
+plotly_data = []  # Not using plotly in this build
+plotly_metadata = []
+
+# Additional metadata for dependencies
+additional_metadata = (
+    safe_copy_metadata('click') +
+    safe_copy_metadata('tornado') +
+    safe_copy_metadata('pyarrow') +
+    safe_copy_metadata('packaging') +
+    safe_copy_metadata('pandas') +
+    safe_copy_metadata('selenium') +
+    safe_copy_metadata('requests')
+)
 
 block_cipher = None
 
@@ -27,7 +48,7 @@ a = Analysis(
         ('../config.example.json', '.'),
         ('../GOOGLE_SHEETS_SETUP.md', '.'),
         ('../COMBINATION_SUMMARY_EXAMPLE.md', '.'),
-    ] + streamlit_data + altair_data + plotly_data,
+    ] + streamlit_data + streamlit_metadata + altair_data + altair_metadata + plotly_data + plotly_metadata + additional_metadata,
     hiddenimports=[
         'streamlit',
         'streamlit.web.cli',
