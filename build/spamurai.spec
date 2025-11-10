@@ -39,11 +39,12 @@ additional_metadata = (
 block_cipher = None
 
 a = Analysis(
-    ['../src/gui.py'],
+    ['../src/launcher.py'],
     pathex=['../src'],
     binaries=[],
     datas=[
-        ('../src/*.py', 'src'),
+        ('../src/gui.py', '.'),  # gui.py at root level for launcher
+        ('../src/*.py', 'src'),  # Other Python files in src/
         ('../requirements.txt', '.'),
         ('../config.example.json', '.'),
         ('../GOOGLE_SHEETS_SETUP.md', '.'),
