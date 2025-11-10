@@ -3,7 +3,7 @@
 ; Requires Inno Setup 6.0 or later: https://jrsoftware.org/isdl.php
 
 #define MyAppName "SPAMURAI"
-#define MyAppVersion "1.9.0"
+#define MyAppVersion "1.10.0"
 #define MyAppPublisher "SPAMURAI Team"
 #define MyAppURL "https://github.com/fawkess/wa_broadcaster"
 #define MyAppExeName "SPAMURAI.exe"
@@ -52,6 +52,7 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 Source: "..\dist\SPAMURAI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Documentation
+Source: "dist\README_WINDOWS.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion; DestName: "README.txt"
 Source: "..\GOOGLE_SHEETS_SETUP.md"; DestDir: "{app}"; Flags: ignoreversion; DestName: "GOOGLE_SHEETS_SETUP.txt"
 Source: "..\config.example.json"; DestDir: "{app}"; Flags: ignoreversion
@@ -60,6 +61,7 @@ Source: "..\config.example.json"; DestDir: "{app}"; Flags: ignoreversion
 ; Start Menu shortcuts
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+Name: "{group}\README (Windows)"; Filename: "{app}\README_WINDOWS.txt"
 Name: "{group}\README"; Filename: "{app}\README.txt"
 
 ; Desktop shortcut

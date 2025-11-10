@@ -6,7 +6,7 @@ import subprocess
 import platform
 
 # Add version
-__version__ = "1.9.0"
+__version__ = "1.10.0"
 
 # Page config
 st.set_page_config(
