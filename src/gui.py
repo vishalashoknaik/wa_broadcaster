@@ -6,7 +6,7 @@ import subprocess
 import platform
 
 # Add version
-__version__ = "1.10.0"
+__version__ = "1.10.1"
 
 # Page config
 st.set_page_config(
@@ -222,13 +222,17 @@ def launch_terminal_process(script_path, config_path):
         if platform.system() == "Windows":
             # Use CREATE_NEW_CONSOLE flag to properly detach the process
             # Close pipes to prevent deadlock when parent doesn't read them
-            process = subprocess.Popen(
-                ['cmd', '/k', 'python', script_path, '--config', config_path],
-                creationflags=subprocess.CREATE_NEW_CONSOLE,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
+            # process = subprocess.Popen(
+            #     ['cmd', '/k', 'python', script_path, '--config', config_path],
+            #     creationflags=subprocess.CREATE_NEW_CONSOLE,
+            #     stdin=subprocess.DEVNULL,
+            #     stdout=subprocess.DEVNULL,
+            #     stderr=subprocess.DEVNULL
+            # )
+            command = ' '.join(['python', script_path, '--config', config_path])
+            print("Executing system command", command)
+            os.system(command)
+
         elif platform.system() == "Darwin":  # macOS
             process = subprocess.Popen([
                 'osascript', '-e',
