@@ -13,7 +13,7 @@ from google_sheets_client import GoogleSheetsClient
 import message_parser
 from table_display import print_table
 
-__version__ = "1.9.0"
+__version__ = "1.9.1"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
