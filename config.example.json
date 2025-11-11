@@ -22,7 +22,7 @@
     "100": 30,
     "300": 30
   },
-  "default_delay": 15,
+  "default_delay": 60,
   "send_as_media": false,
   "media_file": "config/media/sample.jpeg"
 }
