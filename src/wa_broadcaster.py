@@ -1,18 +1,20 @@
 import sys
 import os
-import pandas as pd
-from messenger import WhatsAppMessenger
-from tracker import WhatsAppTracker
-from message_deduplication import MessageDeduplication
 import time
 import json
 import argparse
 import random
 
+# Always include script directory in module search path
+sys.path.append(os.path.dirname(__file__))
+
 from lib import random_sleep, normalize_phone
 from google_sheets_client import GoogleSheetsClient
 import message_parser
 from table_display import print_table
+from messenger import WhatsAppMessenger
+from tracker import WhatsAppTracker
+from message_deduplication import MessageDeduplication
 
 __version__ = "1.9.1"
 
