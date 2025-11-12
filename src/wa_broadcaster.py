@@ -84,7 +84,59 @@ class WhatsAppOrchestrator:
         })
 
     def _load_messages(self):
-        """Load message pools from Google Sheets"""
+        """Load message pools from Google Sheets or override source"""
+        # Check if message override is enabled
+        override_config = self.config.get('message_override', {})
+        override_enabled = override_config.get('enabled', False)
+
+        if override_enabled:
+            override_source = override_config.get('source', 'sadhguru_quote')
+
+            if override_source == 'quick_message':
+                # Use quick message text from config
+                quick_message = override_config.get('quick_message_text', '')
+                if not quick_message.strip():
+                    raise Exception("Quick message text is empty. Please configure a message in Advanced Tactics.")
+
+                # Create MessagePools with just the quick message (no followup)
+                pools = message_parser.MessagePools([quick_message], [])
+
+                self.tracker.logger.info(
+                    f"✅ Using Quick Message override (length: {len(quick_message)} characters)"
+                )
+                return pools
+
+            elif override_source == 'sadhguru_quote':
+                # Fetch from Sadhguru quotes Google Sheet
+                sadhguru_sheet_url = override_config.get('sadhguru_sheet_url', '')
+                sadhguru_tab_name = override_config.get('sadhguru_tab_name', 'Sheet1')
+
+                if not sadhguru_sheet_url:
+                    raise Exception("Sadhguru quotes sheet URL not configured. Please add it to config.json")
+
+                sheets_client = GoogleSheetsClient(self.tracker.logger)
+                rows, available_sheets = sheets_client.fetch_messages_by_tab_name(
+                    sadhguru_sheet_url,
+                    sadhguru_tab_name
+                )
+
+                # Parse Sadhguru quotes
+                pools = message_parser.parse_from_google_sheets(rows)
+
+                # Store for preview
+                self._store_preview_data(
+                    'messages_preview_data',
+                    sadhguru_sheet_url, sadhguru_tab_name, available_sheets, rows,
+                    ['Sadhguru Quotes (First)', 'Sadhguru Quotes (Followup)']
+                )
+
+                self.tracker.logger.info(
+                    f"✅ Loaded {len(pools.first_messages)} Sadhguru quotes, "
+                    f"{len(pools.followup_messages)} followup quotes from Google Sheets"
+                )
+                return pools
+
+        # Default: Load from messages Google Sheet (no override)
         rows, sheet_url, tab_name, available_sheets = self._fetch_from_google_sheets('messages', 'Messages')
 
         # Parse into MessagePools (separate first/followup pools)
@@ -103,23 +155,81 @@ class WhatsAppOrchestrator:
         )
         return pools
 
-    def _get_random_message_combination(self, nick_name):
+    def _get_random_message_combination(self, nick_name, phone_number=None):
         """Select random first message and random followup message independently
+
+        Args:
+            nick_name: Nickname to substitute in messages
+            phone_number: Optional phone number to filter unsent messages
 
         Returns:
             Tuple of (first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup)
+            Returns (None, None, None, None, 0, 0) if no unsent messages available
         """
+        followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
+
+        # Filter unsent messages if phone number provided
+        if phone_number:
+            # Prepare messages with nick_name substituted for deduplication check
+            first_messages_prepared = [msg.replace("<nick_name>", nick_name)
+                                      for msg in self.message_pools.first_messages]
+
+            # Filter to unsent first messages
+            unsent_first = self.deduplication.filter_unsent_messages(first_messages_prepared, phone_number)
+
+            # If no unsent first messages, return None
+            if not unsent_first:
+                return None, None, None, None, 0, 0
+
+            # Select random from unsent first messages
+            first_idx = random.randint(0, len(unsent_first) - 1)
+            first = unsent_first[first_idx]
+            total_first = len(self.message_pools.first_messages)
+
+            # Calculate actual index in original pool for reporting
+            actual_first_idx = first_messages_prepared.index(first)
+
+            # Handle followup messages only if enabled
+            followup = None
+            actual_followup_idx = None
+            total_followup = len(self.message_pools.followup_messages)
+
+            if followup_enabled and self.message_pools.followup_messages:
+                # Prepare followup messages with nick_name substituted
+                followup_messages_prepared = [msg.replace("<nick_name>", nick_name)
+                                             for msg in self.message_pools.followup_messages]
+
+                # Filter to unsent followup messages
+                unsent_followup = self.deduplication.filter_unsent_messages(followup_messages_prepared, phone_number)
+
+                # Select random from unsent followup (if available)
+                if unsent_followup:
+                    followup_idx = random.randint(0, len(unsent_followup) - 1)
+                    followup = unsent_followup[followup_idx]
+                    actual_followup_idx = followup_messages_prepared.index(followup)
+
+            # Return with 1-indexed for human readability
+            return (
+                first,
+                followup,
+                actual_first_idx + 1,
+                actual_followup_idx + 1 if actual_followup_idx is not None else None,
+                total_first,
+                total_followup
+            )
+
+        # Original behavior when no phone number provided (for test message)
         # Select random first message
         first_idx = random.randint(0, len(self.message_pools.first_messages) - 1)
         first = self.message_pools.first_messages[first_idx].replace("<nick_name>", nick_name)
         total_first = len(self.message_pools.first_messages)
 
-        # Select random followup message (if pool exists)
+        # Select random followup message (if pool exists and enabled)
         followup = None
         followup_idx = None
         total_followup = len(self.message_pools.followup_messages)
 
-        if self.message_pools.followup_messages:
+        if followup_enabled and self.message_pools.followup_messages:
             followup_idx = random.randint(0, len(self.message_pools.followup_messages) - 1)
             followup = self.message_pools.followup_messages[followup_idx].replace("<nick_name>", nick_name)
 
@@ -408,22 +518,16 @@ class WhatsAppOrchestrator:
                     continue
 
                 try:
-                    # Get random message combination
-                    first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup = self._get_random_message_combination(nick_name)
+                    # Get random message combination with deduplication filtering
+                    first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup = self._get_random_message_combination(
+                        nick_name,
+                        normalize_phone(number)
+                    )
 
-                    # Check deduplication for first message
-                    already_sent, sent_time = self.deduplication.has_sent_to_number(first_msg, normalize_phone(number))
-                    if already_sent:
-                        self.tracker.logger.info(f"SKIPPED (duplicate message): {number} - Same message already sent on {sent_time}")
+                    # Check if no unsent messages available for this contact
+                    if first_msg is None:
+                        self.tracker.logger.info(f"SKIPPED (all messages already sent): {number}")
                         continue
-
-                    # Check deduplication for followup message if enabled
-                    followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
-                    if followup_enabled and followup_msg:
-                        followup_already_sent, followup_sent_time = self.deduplication.has_sent_to_number(followup_msg, normalize_phone(number))
-                        if followup_already_sent:
-                            self.tracker.logger.info(f"SKIPPED (duplicate followup): {number} - Same followup message already sent on {followup_sent_time}")
-                            continue
 
                     # Send first message
                     result = self.messenger.send_exact_message(number, first_msg)
