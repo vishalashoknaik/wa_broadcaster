@@ -265,12 +265,65 @@ st.title("🥷⚡ SPAMURAI")
 st.caption("Strike fast. Strike precise. Leave no trace.")
 
 # Tabs
-tab1, tab2, tab3 = st.tabs(["⚔️ Prepare Your Weapons", "🎯 Advanced Tactics", "📜 Ninja Codex"])
+tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "🎯 Advanced Tactics"])
 
 # ============================================================================
-# TAB 1: Campaign Setup
+# TAB 1: Ninja Codex (About)
 # ============================================================================
 with tab1:
+    st.markdown(f"""
+    ### The Way of the Digital Ninja
+
+    **Version:** {__version__}
+
+    > *"Strike fast. Strike precise. Leave no trace."*
+
+    SPAMURAI is the ultimate WhatsApp broadcast weapon, combining ancient ninja precision
+    with modern automation power. Master your campaigns with honor and stealth.
+
+    ---
+
+    ### ⚔️ Arsenal
+    - 📊 **Google Sheets Mastery** - Command center for messages and contacts
+    - 🎲 **Random Strike Patterns** - Unique message combinations for stealth
+    - ⚡ **Lightning Execution** - Launch strikes with a single click
+    - ⏱️ **Tactical Delays** - Evade detection with smart timing
+    - 📈 **Battle Analytics** - Track your campaign victories
+    - 🛡️ **Rate Limit Shield** - Automatic protection from detection
+
+    ---
+    """)
+
+    with st.expander("⚡ Strike Sequence", expanded=False):
+        st.markdown("""
+        1. **Prepare Your Weapons** (Campaign Setup tab)
+           - Paste your Google Sheets URLs for messages and contacts
+           - Set your default delay between strikes
+
+        2. **Configure Advanced Tactics** (Advanced tab - optional)
+           - Enable followup messages for double strikes
+           - Adjust timeout intervals for stealth mode
+           - Customize file paths and Chrome settings
+
+        3. **Launch Your Strike** ⚡
+           - Click "Launch Strike" to auto-save and begin
+           - Terminal opens with live battle logs
+           - Watch your campaign execute with precision
+        """)
+
+    st.markdown("""
+    ---
+
+    ### 🥋 The Code
+    Forged with Python, Selenium, and Streamlit
+
+    *Train hard. Strike harder. Disappear without a trace.* 🥷
+    """)
+
+# ============================================================================
+# TAB 2: Campaign Setup
+# ============================================================================
+with tab2:
     # Google Sheets Configuration
     st.markdown("### 📊 Google Sheets")
 
@@ -357,9 +410,9 @@ with tab1:
                     st.error(f"🚫 Strike failed: {str(e)}")
 
 # ============================================================================
-# TAB 2: Advanced Settings
+# TAB 3: Advanced Settings
 # ============================================================================
-with tab2:
+with tab3:
     # Followup Configuration
     st.markdown("### 📨 Followup Messages")
 
@@ -431,56 +484,3 @@ with tab2:
         }
 
         save_and_update_session(config, "✅ Advanced settings saved successfully!")
-
-# ============================================================================
-# TAB 3: About
-# ============================================================================
-with tab3:
-    st.markdown(f"""
-    ### The Way of the Digital Ninja
-
-    **Version:** {__version__}
-
-    > *"Strike fast. Strike precise. Leave no trace."*
-
-    SPAMURAI is the ultimate WhatsApp broadcast weapon, combining ancient ninja precision
-    with modern automation power. Master your campaigns with honor and stealth.
-
-    ---
-
-    ### ⚔️ Arsenal
-    - 📊 **Google Sheets Mastery** - Command center for messages and contacts
-    - 🎲 **Random Strike Patterns** - Unique message combinations for stealth
-    - ⚡ **Lightning Execution** - Launch strikes with a single click
-    - ⏱️ **Tactical Delays** - Evade detection with smart timing
-    - 📈 **Battle Analytics** - Track your campaign victories
-    - 🛡️ **Rate Limit Shield** - Automatic protection from detection
-
-    ---
-    """)
-
-    with st.expander("⚡ Strike Sequence", expanded=False):
-        st.markdown("""
-        1. **Prepare Your Weapons** (Campaign Setup tab)
-           - Paste your Google Sheets URLs for messages and contacts
-           - Set your default delay between strikes
-
-        2. **Configure Advanced Tactics** (Advanced tab - optional)
-           - Enable followup messages for double strikes
-           - Adjust timeout intervals for stealth mode
-           - Customize file paths and Chrome settings
-
-        3. **Launch Your Strike** ⚡
-           - Click "Launch Strike" to auto-save and begin
-           - Terminal opens with live battle logs
-           - Watch your campaign execute with precision
-        """)
-
-    st.markdown("""
-    ---
-
-    ### 🥋 The Code
-    Forged with Python, Selenium, and Streamlit
-
-    *Train hard. Strike harder. Disappear without a trace.* 🥷
-    """)
