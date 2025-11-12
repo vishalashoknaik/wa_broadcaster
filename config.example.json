@@ -17,6 +17,8 @@
   "exclude_file": "config/exclude.txt",
   "sent_numbers_file": "config/sent_numbers.log",
   "error_numbers_file": "config/failed_numbers.log",
+  "message_sent_log": "config/message_sent_log.json",
+  "message_content_log": "config/message_content_log.json",
   "chrome_user_data": "/tmp/WhatsAppSession/Session1",
   "timeouts": {
     "100": 30,

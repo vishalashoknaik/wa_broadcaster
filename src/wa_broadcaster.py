@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from messenger import WhatsAppMessenger
 from tracker import WhatsAppTracker
+from message_deduplication import MessageDeduplication
 import time
 import json
 import argparse
@@ -22,6 +23,11 @@ class WhatsAppOrchestrator:
         self.messenger = WhatsAppMessenger(self.config['chrome_user_data'])
         self.message_pools = self._load_messages()
         self.combination_usage = {}  # Track combination usage for summary
+
+        # Initialize message deduplication
+        sent_log_path = self.config.get('message_sent_log', 'config/message_sent_log.json')
+        content_log_path = self.config.get('message_content_log', 'config/message_content_log.json')
+        self.deduplication = MessageDeduplication(sent_log_path, content_log_path)
 
     def _load_config(self, path):
         with open(path) as f:
@@ -403,6 +409,20 @@ class WhatsAppOrchestrator:
                     # Get random message combination
                     first_msg, followup_msg, first_idx, followup_idx, total_first, total_followup = self._get_random_message_combination(nick_name)
 
+                    # Check deduplication for first message
+                    already_sent, sent_time = self.deduplication.has_sent_to_number(first_msg, normalize_phone(number))
+                    if already_sent:
+                        self.tracker.logger.info(f"SKIPPED (duplicate message): {number} - Same message already sent on {sent_time}")
+                        continue
+
+                    # Check deduplication for followup message if enabled
+                    followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
+                    if followup_enabled and followup_msg:
+                        followup_already_sent, followup_sent_time = self.deduplication.has_sent_to_number(followup_msg, normalize_phone(number))
+                        if followup_already_sent:
+                            self.tracker.logger.info(f"SKIPPED (duplicate followup): {number} - Same followup message already sent on {followup_sent_time}")
+                            continue
+
                     # Send first message
                     result = self.messenger.send_exact_message(number, first_msg)
                     if result is not True:
@@ -412,6 +432,9 @@ class WhatsAppOrchestrator:
                         if self._handle_rate_limit(result):
                             break
                         continue
+
+                    # Record first message in deduplication log
+                    self.deduplication.record_sent(first_msg, normalize_phone(number))
 
                     # Send followup if enabled and exists
                     followup_enabled = self.config.get('followup_config', {}).get('enabled', False)
@@ -426,6 +449,9 @@ class WhatsAppOrchestrator:
                             if self._handle_rate_limit(result2):
                                 break
                             continue
+
+                        # Record followup message in deduplication log
+                        self.deduplication.record_sent(followup_msg, normalize_phone(number))
 
                     # Both succeeded (or only first if no followup)
                     if followup_idx:
