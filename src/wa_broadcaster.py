@@ -16,7 +16,7 @@ from messenger import WhatsAppMessenger
 from tracker import WhatsAppTracker
 from message_deduplication import MessageDeduplication
 
-__version__ = "1.9.1"
+__version__ = "1.10.2"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
