@@ -413,6 +413,38 @@ with tab2:
 # TAB 3: Advanced Settings
 # ============================================================================
 with tab3:
+    # Message Override Configuration
+    st.markdown("### 🎯 Message Override")
+    st.caption("Override Google Sheets messages with alternative sources")
+
+    override_enabled = st.checkbox(
+        "Override Google Sheet Messages",
+        value=get_nested_config(config, "message_override", "enabled", default=False),
+        help="When enabled, use alternative message source instead of Messages Google Sheet"
+    )
+
+    # Only show override options when checkbox is enabled
+    if override_enabled:
+        override_source = st.radio(
+            "Select Message Source",
+            options=["sadhguru_quote", "quick_message"],
+            format_func=lambda x: "🕉️ Sadhguru Quote" if x == "sadhguru_quote" else "✉️ Quick Message",
+            index=0 if get_nested_config(config, "message_override", "source", default="sadhguru_quote") == "sadhguru_quote" else 1,
+            help="Choose your message source"
+        )
+
+        # Show text box only for quick_message option
+        if override_source == "quick_message":
+            quick_message_text = st.text_area(
+                "Quick Message",
+                value=get_nested_config(config, "message_override", "quick_message_text", default=""),
+                placeholder="Enter your message here...",
+                height=150,
+                help="This message will be sent to all contacts"
+            )
+
+    st.markdown("---")
+
     # Followup Configuration
     st.markdown("### 📨 Followup Messages")
 
@@ -471,6 +503,17 @@ with tab3:
     # Save Advanced Settings
     st.markdown("")  # Small spacing
     if st.button("💾 Save Advanced Settings", use_container_width=True):
+        # Message Override Configuration
+        if "message_override" not in config:
+            config["message_override"] = {}
+
+        config["message_override"]["enabled"] = override_enabled
+        if override_enabled:
+            config["message_override"]["source"] = override_source
+            if override_source == "quick_message":
+                config["message_override"]["quick_message_text"] = quick_message_text
+
+        # Followup Configuration
         config["followup_config"]["enabled"] = followup_enabled
         config["followup_config"]["delay_seconds"] = followup_delay
         config["chrome_user_data"] = chrome_user_data
