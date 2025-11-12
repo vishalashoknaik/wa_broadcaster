@@ -9,6 +9,13 @@
       "tab_name": "Sheet1"
     }
   },
+  "message_override": {
+    "enabled": false,
+    "source": "sadhguru_quote",
+    "quick_message_text": "",
+    "sadhguru_sheet_url": "PASTE_YOUR_SADHGURU_QUOTES_GOOGLE_SHEET_URL_HERE",
+    "sadhguru_tab_name": "Sheet1"
+  },
   "followup_config": {
     "enabled": true,
     "delay_seconds": 3
