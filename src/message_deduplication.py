@@ -168,6 +168,24 @@ class MessageDeduplication:
         return [(entry['number'], entry['sent_at'])
                 for entry in self.sent_log[msg_hash]]
 
+    def filter_unsent_messages(self, messages_list, number):
+        """
+        Filter a list of messages to only those not sent to this number
+
+        Args:
+            messages_list: List of message strings to filter
+            number: Phone number to check against
+
+        Returns:
+            List of messages that haven't been sent to this number
+        """
+        unsent = []
+        for msg in messages_list:
+            already_sent, _ = self.has_sent_to_number(msg, number)
+            if not already_sent:
+                unsent.append(msg)
+        return unsent
+
     def get_stats(self):
         """
         Get deduplication statistics
