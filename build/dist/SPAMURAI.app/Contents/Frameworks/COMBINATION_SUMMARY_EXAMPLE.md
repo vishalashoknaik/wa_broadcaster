@@ -1,1 +1,0 @@
-../Resources/COMBINATION_SUMMARY_EXAMPLE.md

@@ -1,1 +1,0 @@
-../Resources/GOOGLE_SHEETS_SETUP.md

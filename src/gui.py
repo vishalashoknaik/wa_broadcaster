@@ -272,13 +272,13 @@ tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "
 # ============================================================================
 with tab1:
     st.markdown(f"""
-    ### The Craft of the Spritual Nurturer
+    ### The Craft of the Spritual Messenger
 
     **Version:** {__version__}
 
     > *"Each strike opens a window. Each message a potential possibility"*
 
-    SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.
+    SPAMURAI as a ninja-messenger, carrying one carefully crafted drop of consciousness through every message.
     Each message is a window, a strike of awareness, a drop of stillness shared through action.
     ---
 
