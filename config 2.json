@@ -1,0 +1,14 @@
+{
+  "excel_path": "config/contacts.xlsx",
+  "message_file": "config/message.txt",
+  "log_file": "config/whatsapp.log",
+  "exclude_file": "config/exclude.txt",
+  "sent_numbers_file": "config/sent_numbers.log",
+  "error_numbers_file": "config/failed_numbers.log",
+  "chrome_user_data": "C:/Temp/WhatsAppSession/Session1",
+  "timeouts": {
+    "100": 30,
+    "300": 30
+  },
+  "default_delay": 5
+}
