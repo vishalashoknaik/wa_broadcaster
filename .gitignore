@@ -11,6 +11,7 @@
 /src/wa_broadcaster.spec
 config
 config.json
+config/firebase-credentials.json
 
 # Virtual environment
 venv/
