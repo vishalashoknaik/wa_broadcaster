@@ -3,6 +3,8 @@ from firebase_admin import credentials, firestore
 from datetime import datetime
 import uuid
 import hashlib
+import os
+import json
 
 
 class FirebaseLogger:
@@ -31,19 +33,46 @@ class FirebaseLogger:
             self._initialize_firebase()
 
     def _initialize_firebase(self):
-        """Initialize Firebase Admin SDK and Firestore client"""
+        """Initialize Firebase Admin SDK and Firestore client
+
+        Tries credentials in this order:
+        1. FIREBASE_CREDENTIALS environment variable (JSON string)
+        2. credentials_path from config (file path)
+        """
         try:
             firebase_config = self.config.get('firebase_config', {})
-            credentials_path = firebase_config.get('credentials_path')
+            cred = None
 
-            if not credentials_path:
-                print("Warning: Firebase enabled but no credentials_path provided")
-                self.enabled = False
-                return
+            # Option 1: Try environment variable first (recommended)
+            credentials_json = os.getenv('FIREBASE_CREDENTIALS')
+            if credentials_json:
+                try:
+                    cred_dict = json.loads(credentials_json)
+                    cred = credentials.Certificate(cred_dict)
+                    print("✅ Using Firebase credentials from environment variable")
+                except json.JSONDecodeError as e:
+                    print(f"⚠️ Invalid JSON in FIREBASE_CREDENTIALS: {e}")
+                    print("Trying credentials file...")
+
+            # Option 2: Fall back to credentials file
+            if not cred:
+                credentials_path = firebase_config.get('credentials_path')
+                if not credentials_path:
+                    print("⚠️ Firebase enabled but no credentials found")
+                    print("   Set FIREBASE_CREDENTIALS env var or credentials_path in config")
+                    self.enabled = False
+                    return
+
+                if not os.path.exists(credentials_path):
+                    print(f"⚠️ Firebase credentials file not found: {credentials_path}")
+                    self.enabled = False
+                    return
+
+                cred = credentials.Certificate(credentials_path)
+                print(f"✅ Using Firebase credentials from file: {credentials_path}")
 
             # Initialize Firebase app if not already initialized
             if not firebase_admin._apps:
-                cred = credentials.Certificate(credentials_path)
                 firebase_admin.initialize_app(cred)
 
             self.db = firestore.client()

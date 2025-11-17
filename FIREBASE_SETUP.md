@@ -39,6 +39,40 @@ Firebase Firestore provides:
 
 ### 4. Configure SPAMURAI
 
+**Recommended: Environment Variable Method** ✅
+
+Use the automated setup script (works for all installations on this machine):
+
+**macOS/Linux:**
+```bash
+./setup_firebase.sh ~/Downloads/your-project-xxxxx.json
+```
+
+**Windows:**
+```cmd
+setup_firebase.bat C:\Users\YourName\Downloads\your-project-xxxxx.json
+```
+
+The script will:
+- Validate your credentials file
+- Add `FIREBASE_CREDENTIALS` environment variable to your shell config
+- Test the connection
+- Provide next steps
+
+**Manual Environment Variable Setup:**
+
+If you prefer manual setup:
+
+```bash
+# macOS/Linux - Add to ~/.zshrc or ~/.bashrc
+export FIREBASE_CREDENTIALS='{"type":"service_account","project_id":"...paste full JSON here..."}'
+
+# Windows - Run in Command Prompt (Admin)
+setx FIREBASE_CREDENTIALS "{\"type\":\"service_account\",\"project_id\":\"...\"}"
+```
+
+**Alternative: File-Based Method** (Not recommended for multiple installations)
+
 1. Move the downloaded JSON file to your SPAMURAI config directory:
    ```bash
    mv ~/Downloads/your-project-xxxxx.json config/firebase-credentials.json
@@ -59,6 +93,20 @@ Firebase Firestore provides:
    ```bash
    echo "config/firebase-credentials.json" >> .gitignore
    ```
+
+**Enable Firebase:**
+
+Regardless of method, enable Firebase in your `config.json`:
+```json
+{
+  "firebase_config": {
+    "enabled": true,
+    "collection_name": "message_events"
+  }
+}
+```
+
+Note: With environment variables, you don't need `credentials_path` in config!
 
 ### 5. Set Firestore Security Rules (Optional but Recommended)
 
@@ -143,9 +191,46 @@ Firebase Firestore free tier:
 
 For 20,000 messages/day, you'll stay within free tier limits.
 
+## Sharing Credentials Across Multiple Installations
+
+**The Environment Variable Advantage:**
+
+With environment variables, all installations log to the **same Firebase project**:
+
+1. **Download credentials once** from Firebase Console (one JSON file)
+2. **Share securely** with your team:
+   - Via password manager (1Password, LastPass)
+   - Encrypted email/chat
+   - Secure file sharing service
+3. **Each machine runs setup script** once:
+   ```bash
+   ./setup_firebase.sh /path/to/shared-credentials.json
+   ```
+4. **All installations on that machine** automatically use the same credentials
+
+**Benefits:**
+- ✅ Centralized logging - all messages in one Firebase project
+- ✅ No file management - credentials stored in environment
+- ✅ Not in git history - secure by default
+- ✅ Easy to update - re-run setup script with new credentials
+- ✅ Works across different SPAMURAI installations on same machine
+
+**Security Best Practices:**
+- Share credentials via encrypted channels only
+- Use different Firebase projects for production vs testing
+- Rotate credentials periodically (generate new key, re-run setup)
+- Never commit credentials to git
+
 ## Troubleshooting
 
 ### Firebase initialization failed
+**Using environment variable:**
+- Verify variable is set: `echo $FIREBASE_CREDENTIALS` (macOS/Linux) or `echo %FIREBASE_CREDENTIALS%` (Windows)
+- Check JSON is valid: `python3 -c "import json,os; json.loads(os.getenv('FIREBASE_CREDENTIALS'))"`
+- Restart terminal after setup
+- Re-run setup script if needed
+
+**Using credentials file:**
 - Check that `credentials_path` points to correct JSON file
 - Verify JSON file is valid service account key
 - Check file permissions
@@ -154,10 +239,20 @@ For 20,000 messages/day, you'll stay within free tier limits.
 - Confirm `enabled: true` in config
 - Check console for error messages
 - Verify Firestore is enabled in Firebase Console
+- Run `python3 test_firebase.py` to test connection
 
 ### "Permission denied" errors
 - Check Firestore security rules
 - Verify service account has proper permissions
+- Ensure credentials haven't been revoked in Firebase Console
+
+### Environment variable not working
+- Make sure you restarted terminal after running setup script
+- Check shell config file has the export line:
+  ```bash
+  cat ~/.zshrc | grep FIREBASE_CREDENTIALS
+  ```
+- Try manual setup if script failed
 
 ## Disabling Firebase
 
