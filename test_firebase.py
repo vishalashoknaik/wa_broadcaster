@@ -50,7 +50,7 @@ def test_firebase_enabled():
     print("\n=== Test 2: Firebase Enabled ===")
 
     # Try to load config
-    config_path = "config/config.json"
+    config_path = "config.json"
     if not os.path.exists(config_path):
         print("⚠️  No config.json found - skipping enabled test")
         print("   To test Firebase enabled mode:")
