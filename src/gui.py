@@ -278,7 +278,7 @@ with tab1:
 
     > *"Each strike opens a window. Each message a potential possibility"*
 
-    SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.
+    Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.
     Each message is a window, a strike of awareness, a drop of stillness shared through action.
     ---
 
