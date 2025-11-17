@@ -4,6 +4,7 @@ import os
 import sys
 import subprocess
 import platform
+from lib import normalize_phone
 
 # Add version
 __version__ = "1.10.2"
@@ -208,6 +209,36 @@ def save_and_update_session(config, success_message=None):
     if success_message:
         st.success(success_message)
 
+
+def read_exclude_file(path):
+    """Read exclude file and return list of stripped lines"""
+    if not path:
+        return []
+    try:
+        if not os.path.exists(path):
+            return []
+        with open(path, 'r', encoding='utf-8') as f:
+            return [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        st.error(f"Could not read exclude file: {e}")
+        return []
+
+
+def write_exclude_file(path, numbers):
+    """Write list of numbers to exclude file (one per line)"""
+    if not path:
+        st.error("Exclude file path is not configured.")
+        return False
+    try:
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            for n in numbers:
+                f.write(f"{n}\n")
+        return True
+    except Exception as e:
+        st.error(f"Failed to write exclude file: {e}")
+        return False
+
 def launch_terminal_process(script_path, config_path):
     """Launch wa_broadcaster.py in a new terminal window
 
@@ -262,7 +293,7 @@ config = st.session_state.config
 
 # Header
 st.title("🥷⚡ SPAMURAI")
-st.caption("Each strike opens a window. Each message a potential possibility")
+st.caption("Strike fast. Strike precise. Leave no trace.")
 
 # Tabs
 tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "🎯 Advanced Tactics"])
@@ -272,14 +303,15 @@ tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "
 # ============================================================================
 with tab1:
     st.markdown(f"""
-    ### The Craft of the Spritual Nurturer
+    ### The Way of the Digital Ninja
 
     **Version:** {__version__}
 
-    > *"Each strike opens a window. Each message a potential possibility"*
+    > *"Strike fast. Strike precise. Leave no trace."*
 
-    > *Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.*
-    > *Each message becomes an act of awareness, a quiet moment of stillness carried through action.*
+    SPAMURAI is the ultimate WhatsApp broadcast weapon, combining ancient ninja precision
+    with modern automation power. Master your campaigns with honor and stealth.
+
     ---
 
     ### ⚔️ Arsenal
@@ -316,7 +348,7 @@ with tab1:
     ### 🥋 The Code
     Forged with Python, Selenium, and Streamlit
 
-    *Align within. Strike with awareness. Slip back into stillness.* 🥷
+    *Train hard. Strike harder. Disappear without a trace.* 🥷
     """)
 
 # ============================================================================
@@ -526,3 +558,61 @@ with tab3:
         }
 
         save_and_update_session(config, "✅ Advanced settings saved successfully!")
+
+    # ===================== Exclude List UI (End of page) =====================
+    st.markdown("---")
+    st.markdown("### 🔒 Exclude List")
+    st.caption("View and manage numbers that will be skipped by campaigns")
+
+    # Use the local exclude_file input value (not yet saved) so user can manage the intended file
+    current_exclude_path = exclude_file or config.get("exclude_file", "config/exclude.txt")
+
+    # Add numbers section
+    st.markdown("#### Add Numbers to Exclude")
+    new_excludes = st.text_input("Enter number(s) to exclude (comma-separated)")
+    if st.button("➕ Add to Exclude", use_container_width=True):
+        if not new_excludes.strip():
+            st.warning("Enter at least one phone number to add.")
+        else:
+            excludes = read_exclude_file(current_exclude_path)
+            raw_list = [s.strip() for s in new_excludes.split(',') if s.strip()]
+            normalized = []
+            for raw in raw_list:
+                try:
+                    norm = normalize_phone(raw)
+                except Exception:
+                    # Fallback simple normalization
+                    norm = raw.replace('.0', '').strip()
+                if norm not in excludes and norm not in normalized:
+                    normalized.append(norm)
+
+            if normalized:
+                combined = excludes + normalized
+                if write_exclude_file(current_exclude_path, combined):
+                    st.success(f"Added {len(normalized)} number(s) to {current_exclude_path}")
+            else:
+                st.info("No new numbers to add (duplicates ignored).")
+
+    # Remove numbers section
+    st.markdown("#### Remove Numbers from Exclude")
+    excludes = read_exclude_file(current_exclude_path)
+    if excludes:
+        to_remove = st.multiselect("Select numbers to remove from exclude list", options=excludes)
+        if st.button("🗑️ Remove selected", use_container_width=True):
+            if not to_remove:
+                st.warning("Select at least one number to remove.")
+            else:
+                remaining = [n for n in excludes if n not in to_remove]
+                if write_exclude_file(current_exclude_path, remaining):
+                    st.success(f"Removed {len(to_remove)} number(s) from {current_exclude_path}")
+
+    # Display currently excluded numbers at the very end
+    st.markdown("---")
+    st.markdown("#### Currently Excluded Numbers")
+    excludes = read_exclude_file(current_exclude_path)
+    if excludes:
+        st.markdown("**Numbers in exclude list:**")
+        for n in excludes:
+            st.write(f"• {n}")
+    else:
+        st.info("No numbers currently in the exclude list.")

@@ -9,6 +9,11 @@ echo SPAMURAI - WhatsApp Broadcast Ninja
 echo ======================================
 echo.
 
+set PATH=..\python_311_spamurai;..\python_311_spamurai\Scripts;%PATH%
+
+
+..\PortableGit\bin\git pull
+
 REM Get the directory where this script is located
 set SCRIPT_DIR=%~dp0
 
@@ -16,6 +21,12 @@ REM Change to the project directory
 cd /d "%SCRIPT_DIR%"
 
 REM Check if streamlit is installed
+echo Using python installation from
+where python
+
+echo This is how path looks:
+echo %PATH%
+
 python -c "import streamlit" 2>nul
 if errorlevel 1 (
     echo X Streamlit not installed!
