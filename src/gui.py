@@ -262,7 +262,7 @@ config = st.session_state.config
 
 # Header
 st.title("🥷⚡ SPAMURAI")
-st.caption("Strike fast. Strike precise. Leave no trace.")
+st.caption("Each strike opens a window. Each message a potential possibility")
 
 # Tabs
 tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "🎯 Advanced Tactics"])
@@ -278,8 +278,8 @@ with tab1:
 
     > *"Each strike opens a window. Each message a potential possibility"*
 
-    Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.
-    Each message is a window, a strike of awareness, a drop of stillness shared through action.
+    *Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.
+    Each message is a window, a strike of awareness, a drop of stillness shared through action.*
     ---
 
     ### ⚔️ Arsenal
