@@ -278,8 +278,8 @@ with tab1:
 
     > *"Each strike opens a window. Each message a potential possibility"*
 
-    *Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.
-    Each message is a window, a strike of awareness, a drop of stillness shared through action.*
+    > *Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.*
+    > *Each message becomes an act of awareness, a quiet moment of stillness carried through action.*
     ---
 
     ### ⚔️ Arsenal
@@ -316,7 +316,7 @@ with tab1:
     ### 🥋 The Code
     Forged with Python, Selenium, and Streamlit
 
-    *Train hard. Strike harder. Disappear without a trace.* 🥷
+    *Align within. Strike with awareness. Slip back into stillness.* 🥷
     """)
 
 # ============================================================================
