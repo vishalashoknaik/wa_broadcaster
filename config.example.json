@@ -33,5 +33,10 @@
   },
   "default_delay": 60,
   "send_as_media": false,
-  "media_file": "config/media/sample.jpeg"
+  "media_file": "config/media/sample.jpeg",
+  "firebase_config": {
+    "enabled": false,
+    "credentials_path": "config/firebase-credentials.json",
+    "collection_name": "message_events"
+  }
 }
