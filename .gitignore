@@ -31,3 +31,15 @@ build/icon_source.png
 build/SPAMURAI.iconset/
 
 # Note: icon.ico and icon.icns are tracked for builds
+
+# Distribution files (prevent accidentally committing large build artifacts)
+*.zip
+*.dmg
+*.pkg
+build/dist/
+build/spamurai/
+build/wa_broadcaster/
+build/build/
+
+# Exception: Allow the main executable
+!wa_broadcaster.exe
