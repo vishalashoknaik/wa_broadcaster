@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from lib import normalize_phone
+from firebase_logger import FirebaseLogger
 
 
 class WhatsAppTracker:
@@ -15,6 +16,9 @@ class WhatsAppTracker:
         self.console_handler = None
         self._setup_logging()
         self._ensure_files_exist()
+
+        # Initialize Firebase logger (won't crash if disabled/misconfigured)
+        self.firebase_logger = FirebaseLogger(config)
 
     def _setup_logging(self):
         """Setup logging with proper handler management"""
@@ -87,17 +91,35 @@ class WhatsAppTracker:
             if self.logger:
                 self.logger.error(f"Could not write to {filepath}: {e}")
 
-    def record_success(self, name, number, variant_info=None):
+    def record_success(self, name, number, variant_info=None, message_content=None, tags=None):
         """Record successful message send"""
         self.sent_count += 1
         variant_str = f" [variant: {variant_info}]" if variant_info else ""
         self.logger.info(f"SUCCESS (#{self.sent_count}): {name} ({number}){variant_str}")
         self._write_to_file(self.config['sent_numbers_file'], number)
 
-    def record_failure(self, name, number, error):
+        # Log to Firebase (if enabled)
+        self.firebase_logger.log_success(
+            name=name,
+            phone=number,
+            variant_info=variant_info,
+            message_content=message_content,
+            tags=tags
+        )
+
+    def record_failure(self, name, number, error, variant_info=None, tags=None):
         """Record failed message send"""
         self.logger.error(f"FAILED: {name} ({number}) - {error}")
         self._write_to_file(self.config['error_numbers_file'], f"{number}|{error}")
+
+        # Log to Firebase (if enabled)
+        self.firebase_logger.log_failure(
+            name=name,
+            phone=number,
+            error=error,
+            variant_info=variant_info,
+            tags=tags
+        )
 
     def get_excluded_numbers(self):
         """Get set of excluded phone numbers"""
