@@ -9,6 +9,8 @@ echo Firebase Credentials Setup for SPAMURAI
 echo ==========================================
 echo.
 
+set PATH=..\python_311_spamurai;..\python_311_spamurai\Scripts;%PATH%
+
 REM Check if credentials file path is provided
 if "%~1"=="" (
     echo Error: Please provide path to Firebase credentials JSON file
@@ -33,6 +35,7 @@ echo [OK] Valid Firebase credentials file found
 echo.
 
 REM Read JSON content (basic validation)
+echo %CREDS_FILE%
 python -c "import json; json.load(open(r'%CREDS_FILE%'))" 2>nul
 if errorlevel 1 (
     echo Error: Invalid JSON file

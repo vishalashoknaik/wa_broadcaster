@@ -24,8 +24,11 @@ REM Check if streamlit is installed
 echo Using python installation from
 where python
 
+python -m pip install -r requirements.txt
+
 echo This is how path looks:
 echo %PATH%
+
 
 python -c "import streamlit" 2>nul
 if errorlevel 1 (
@@ -34,7 +37,10 @@ if errorlevel 1 (
     echo Installing dependencies...
     pip install -r requirements.txt
     echo.
+    pause
 )
+
+cls
 
 REM Launch SPAMURAI GUI
 echo Launching SPAMURAI GUI...

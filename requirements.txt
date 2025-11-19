@@ -5,3 +5,4 @@ pyperclip>=1.8.0
 openpyxl>=3.0.0
 requests>=2.25.0
 streamlit>=1.28.0
+firebase_admin==7.1.0
