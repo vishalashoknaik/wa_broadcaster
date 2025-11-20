@@ -20,6 +20,8 @@ __version__ = "1.10.2"
 
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
+        self.config_path = os.path.abspath(config_path)
+        self.config_dir = os.path.dirname(self.config_path)
         self.config = self._load_config(config_path)
         self._validate_firebase_config()
         self.tracker = WhatsAppTracker(self.config)
@@ -30,11 +32,21 @@ class WhatsAppOrchestrator:
         # Initialize message deduplication
         sent_log_path = self.config.get('message_sent_log', 'config/message_sent_log.json')
         content_log_path = self.config.get('message_content_log', 'config/message_content_log.json')
+        # Resolve relative paths
+        sent_log_path = self._resolve_path(sent_log_path)
+        content_log_path = self._resolve_path(content_log_path)
         self.deduplication = MessageDeduplication(sent_log_path, content_log_path)
 
     def _load_config(self, path):
         with open(path) as f:
             return json.load(f)
+
+    def _resolve_path(self, path):
+        """Resolve relative paths based on project root (where config.json is)"""
+        if not path or os.path.isabs(path):
+            return path
+        # config_dir is the directory containing config.json, which is the project root
+        return os.path.join(self.config_dir, path)
 
     def _validate_firebase_config(self):
         """Validate Firebase configuration and show helpful error if missing"""
@@ -91,6 +103,11 @@ class WhatsAppOrchestrator:
             }, indent=2))
             print("\n" + "="*80 + "\n")
             sys.exit(1)
+
+        # Resolve relative paths based on project root
+        credentials_path = self._resolve_path(credentials_path)
+        # Update config with resolved absolute path for firebase_logger
+        self.config['firebase_config']['credentials_path'] = credentials_path
 
         # Check if credentials file exists
         if not os.path.exists(credentials_path):

@@ -112,10 +112,34 @@ fi
 echo ""
 
 # Check if Firebase credentials need setup (do this right after dependencies)
+# We need setup if EITHER:
+#   1. firebase.json doesn't exist, OR
+#   2. config.json doesn't have firebase_config section
+
+NEEDS_FIREBASE_SETUP=false
+
+# Check if firebase.json exists
 if [ ! -f "$PROJECT_DIR/config/firebase.json" ] && [ ! -f "$PROJECT_DIR/config/firebase-credentials.json" ] && [ -z "$FIREBASE_CREDENTIALS" ]; then
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+# Check if config.json has firebase_config section
+if [ -f "$PROJECT_DIR/config.json" ]; then
+    # Use python to check if firebase_config exists in config.json
+    HAS_FIREBASE_CONFIG=$(python3 -c "import json; config = json.load(open('config.json')); print('yes' if 'firebase_config' in config else 'no')" 2>/dev/null || echo "no")
+
+    if [ "$HAS_FIREBASE_CONFIG" = "no" ] || [ -z "$HAS_FIREBASE_CONFIG" ]; then
+        NEEDS_FIREBASE_SETUP=true
+    fi
+else
+    # config.json doesn't exist - will need Firebase setup
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+if [ "$NEEDS_FIREBASE_SETUP" = "true" ]; then
     echo -e "${CYAN}[Step 4b/5]${NC} Firebase credentials setup..."
     echo ""
-    echo -e "${YELLOW}[NOTICE]${NC} Firebase credentials not found. Starting automatic setup..."
+    echo -e "${YELLOW}[NOTICE]${NC} Firebase configuration incomplete. Starting automatic setup..."
     echo ""
 
     # Run automated Firebase setup
@@ -131,7 +155,7 @@ if [ ! -f "$PROJECT_DIR/config/firebase.json" ] && [ ! -f "$PROJECT_DIR/config/f
         exit 1
     fi
 
-    # Verify credentials were created
+    # Verify credentials were created and config updated
     if [ -f "$PROJECT_DIR/config/firebase.json" ]; then
         echo -e "${GREEN}[OK]${NC} Firebase credentials configured successfully"
     else

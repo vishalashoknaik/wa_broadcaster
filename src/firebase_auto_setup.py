@@ -11,6 +11,9 @@ import json
 import re
 from pathlib import Path
 
+# Hardcoded Google Drive URL for Firebase credentials
+FIREBASE_CREDENTIALS_URL = "https://drive.google.com/file/d/1G7Apo59Z9e30pM4fSBgmyMJLeRc3QDoo/view?usp=drive_link"
+
 # Auto-install gdown if not present (for Google Drive downloads)
 try:
     import gdown
@@ -40,30 +43,23 @@ def setup_firebase_credentials(credentials_path="config/firebase.json"):
     print("FIREBASE CREDENTIALS SETUP")
     print("="*80)
     print("\nFirebase credentials not found. Let's set them up!")
-    print("\nYou'll need two pieces of information from your POC:")
-    print("  1. Google Drive URL for the credential zip")
-    print("  2. Password for the credential zip")
+    print("\nYou'll need the password for the credential zip.")
+    print("(Get this password from your POC)")
     print("\n" + "="*80 + "\n")
 
-    # Step 1: Get Google Drive URL
-    drive_url = _prompt_drive_url()
-    if not drive_url:
-        print("\n❌ Setup cancelled.")
-        return False
-
-    # Step 2: Get zip password
+    # Step 1: Get zip password
     zip_password = _prompt_password()
     if not zip_password:
         print("\n❌ Setup cancelled.")
         return False
 
-    # Step 3: Download and extract
+    # Step 2: Download and extract
     print("\n" + "="*80)
     print("DOWNLOADING AND INSTALLING CREDENTIALS")
     print("="*80 + "\n")
 
     try:
-        success = _download_and_extract(drive_url, zip_password, credentials_path)
+        success = _download_and_extract(FIREBASE_CREDENTIALS_URL, zip_password, credentials_path)
 
         if success:
             print("\n" + "="*80)
@@ -78,9 +74,8 @@ def setup_firebase_credentials(credentials_path="config/firebase.json"):
             print("❌ SETUP FAILED")
             print("="*80)
             print("\nPlease verify:")
-            print("  1. The Google Drive URL is correct")
-            print("  2. The password is correct")
-            print("  3. You have internet connectivity")
+            print("  1. The password is correct")
+            print("  2. You have internet connectivity")
             print("\nContact your POC if the problem persists.")
             print("="*80 + "\n")
             return False
@@ -91,38 +86,9 @@ def setup_firebase_credentials(credentials_path="config/firebase.json"):
         return False
 
 
-def _prompt_drive_url():
-    """Prompt user for Google Drive URL"""
-    print("[Step 1/2] Google Drive URL")
-    print("-" * 80)
-    print("Enter the Google Drive URL for the credential zip.")
-    print("(This URL is provided by your POC)")
-    print()
-    print("Example formats:")
-    print("  • https://drive.google.com/file/d/FILE_ID/view")
-    print("  • https://drive.google.com/uc?id=FILE_ID")
-    print()
-
-    while True:
-        url = input("Google Drive URL (or 'cancel' to exit): ").strip()
-
-        if url.lower() == 'cancel':
-            return None
-
-        if not url:
-            print("❌ URL cannot be empty. Please try again.\n")
-            continue
-
-        # Validate URL format
-        if _is_valid_drive_url(url):
-            return url
-        else:
-            print("❌ Invalid Google Drive URL format. Please try again.\n")
-
-
 def _prompt_password():
     """Prompt user for zip password"""
-    print("\n[Step 2/2] Credential Zip Password")
+    print("Credential Zip Password")
     print("-" * 80)
     print("Enter the password for the credential zip file.")
     print("(This password is provided by your POC)")
@@ -143,21 +109,6 @@ def _prompt_password():
         return None
 
     return password
-
-
-def _is_valid_drive_url(url):
-    """Validate Google Drive URL format"""
-    patterns = [
-        r'drive\.google\.com/file/d/([^/]+)',
-        r'drive\.google\.com/uc\?id=([^&]+)',
-        r'drive\.google\.com/open\?id=([^&]+)'
-    ]
-
-    for pattern in patterns:
-        if re.search(pattern, url):
-            return True
-
-    return False
 
 
 def _download_and_extract(drive_url, password, credentials_path):
@@ -248,7 +199,8 @@ def _download_and_extract(drive_url, password, credentials_path):
 
             # Update config.json with firebase_config section
             print("⚙️  Updating config.json...")
-            config_file = credentials_path.parent / "config.json"
+            # config.json is at project root, not in config/ folder
+            config_file = credentials_path.parent.parent / "config.json"
 
             # Load existing config or create new one
             if config_file.exists():
