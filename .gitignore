@@ -44,3 +44,4 @@ build/build/
 
 # Exception: Allow the main executable
 !wa_broadcaster.exe
+test_firebase_setup.py

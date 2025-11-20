@@ -239,12 +239,36 @@ def _download_and_extract(drive_url, password, credentials_path):
             print(f"❌ Validation failed: {str(e)}")
             return False
 
-        # Step 5: Copy to final location
+        # Step 5: Copy to final location and update config.json
         print(f"💾 Installing credentials to {credentials_path}...")
         try:
             import shutil
             shutil.copy2(source_json, credentials_path)
+            print("✓ Credentials installed\n")
 
+            # Update config.json with firebase_config section
+            print("⚙️  Updating config.json...")
+            config_file = credentials_path.parent / "config.json"
+
+            # Load existing config or create new one
+            if config_file.exists():
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+            else:
+                config = {}
+
+            # Add or update firebase_config section
+            config["firebase_config"] = {
+                "enabled": True,
+                "credentials_path": str(credentials_path),
+                "collection_name": "message_events"
+            }
+
+            # Save config.json
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+
+            print("✓ config.json updated with firebase_config section\n")
             print("✓ Installation complete\n")
             return True
 
