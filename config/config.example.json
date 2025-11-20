@@ -1,0 +1,46 @@
+{
+  "user_profile": {
+    "name": "",
+    "phone_number": ""
+  },
+  "google_sheets_config": {
+    "messages": {
+      "sheet_url": "PASTE_YOUR_MESSAGES_GOOGLE_SHEET_URL_HERE",
+      "tab_name": "Sheet1"
+    },
+    "contacts": {
+      "sheet_url": "PASTE_YOUR_CONTACTS_GOOGLE_SHEET_URL_HERE",
+      "tab_name": "Sheet1"
+    }
+  },
+  "message_override": {
+    "enabled": false,
+    "source": "sadhguru_quote",
+    "quick_message_text": "",
+    "sadhguru_sheet_url": "PASTE_YOUR_SADHGURU_QUOTES_GOOGLE_SHEET_URL_HERE",
+    "sadhguru_tab_name": "Sheet1"
+  },
+  "followup_config": {
+    "enabled": true,
+    "delay_seconds": 3
+  },
+  "log_file": "config/whatsapp.log",
+  "exclude_file": "config/exclude.txt",
+  "sent_numbers_file": "config/sent_numbers.log",
+  "error_numbers_file": "config/failed_numbers.log",
+  "message_sent_log": "config/message_sent_log.json",
+  "message_content_log": "config/message_content_log.json",
+  "chrome_user_data": "/tmp/WhatsAppSession/Session1",
+  "timeouts": {
+    "100": 30,
+    "300": 30
+  },
+  "default_delay": 60,
+  "send_as_media": false,
+  "media_file": "config/media/sample.jpeg",
+  "firebase_config": {
+    "enabled": true,
+    "credentials_path": "config/firebase.json",
+    "collection_name": "message_events"
+  }
+}

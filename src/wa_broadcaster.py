@@ -21,6 +21,7 @@ __version__ = "1.10.2"
 class WhatsAppOrchestrator:
     def __init__(self, config_path):
         self.config = self._load_config(config_path)
+        self._validate_firebase_config()
         self.tracker = WhatsAppTracker(self.config)
         self.messenger = WhatsAppMessenger(self.config['chrome_user_data'])
         self.message_pools = self._load_messages()
@@ -34,6 +35,77 @@ class WhatsAppOrchestrator:
     def _load_config(self, path):
         with open(path) as f:
             return json.load(f)
+
+    def _validate_firebase_config(self):
+        """Validate Firebase configuration and show helpful error if missing"""
+        firebase_config = self.config.get('firebase_config')
+
+        if not firebase_config:
+            print("\n" + "="*80)
+            print("ERROR: Firebase configuration is missing!")
+            print("="*80)
+            print("\nFirebase is MANDATORY for SPAMURAI to function.")
+            print("\nYour config.json must include the following structure:\n")
+            print(json.dumps({
+                "firebase_config": {
+                    "enabled": True,
+                    "credentials_path": "config/firebase.json",
+                    "collection_name": "message_events"
+                }
+            }, indent=2))
+            print("\n" + "="*80)
+            print("Next Steps:")
+            print("="*80)
+            print("1. Contact your POC to get the firebase.json file")
+            print("\n2. Save it as: config/firebase.json")
+            print("\n3. Add the 'firebase_config' section shown above to your config.json")
+            print("="*80 + "\n")
+            sys.exit(1)
+
+        if not firebase_config.get('enabled'):
+            print("\n" + "="*80)
+            print("ERROR: Firebase is disabled in configuration!")
+            print("="*80)
+            print("\nFirebase must be enabled for SPAMURAI to function.")
+            print("\nIn your config.json, set:\n")
+            print(json.dumps({
+                "firebase_config": {
+                    "enabled": True
+                }
+            }, indent=2))
+            print("\n" + "="*80 + "\n")
+            sys.exit(1)
+
+        credentials_path = firebase_config.get('credentials_path')
+        if not credentials_path:
+            print("\n" + "="*80)
+            print("ERROR: Firebase credentials path is missing!")
+            print("="*80)
+            print("\nYour config.json must specify the credentials file path:\n")
+            print(json.dumps({
+                "firebase_config": {
+                    "enabled": True,
+                    "credentials_path": "config/firebase.json",
+                    "collection_name": "message_events"
+                }
+            }, indent=2))
+            print("\n" + "="*80 + "\n")
+            sys.exit(1)
+
+        # Check if credentials file exists
+        if not os.path.exists(credentials_path):
+            print("\n" + "="*80)
+            print("ERROR: Firebase credentials file not found!")
+            print("="*80)
+            print(f"\nExpected location: {credentials_path}")
+            print("\n" + "="*80)
+            print("Next Steps:")
+            print("="*80)
+            print("1. Contact your POC to get the firebase.json file")
+            print(f"\n2. Save it as: {credentials_path}")
+            print("\n3. Restart SPAMURAI")
+            print("="*80 + "\n")
+            sys.exit(1)
 
     def _fetch_from_google_sheets(self, config_key, config_name):
         """Generic method to fetch data from Google Sheets
@@ -456,9 +528,20 @@ class WhatsAppOrchestrator:
                     self._cleanup()
                     sys.exit(0)
 
+            # Get defaults from user profile
+            user_profile = self.config.get('user_profile', {})
+            default_phone = user_profile.get('phone_number', '')
+            default_name = user_profile.get('name', '')
+
             print("", flush=True)
-            ph_num = input('Enter your phone number to send test message: ')
-            nick_name = input('Enter nick_name: ')
+            # Use user's phone as default for test message
+            phone_prompt = f'Enter your phone number to send test message [{default_phone}]: ' if default_phone else 'Enter your phone number to send test message: '
+            ph_num = input(phone_prompt).strip() or default_phone
+
+            # Use user's name as default nickname
+            name_prompt = f'Enter nick_name [{default_name}]: ' if default_name else 'Enter nick_name: '
+            nick_name = input(name_prompt).strip() or default_name
+
             print('Sending test message to', ph_num, flush=True)
             random_sleep(1)
 

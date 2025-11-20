@@ -23,6 +23,7 @@ These launchers provide a hassle-free way to run SPAMURAI without typing command
 ### Requirements
 - Python 3.8 or higher ([Download](https://www.python.org/downloads/))
 - Check "Add Python to PATH" during installation
+- **Firebase credentials configured** (See FIREBASE_SETUP.md)
 
 ---
 
@@ -44,6 +45,7 @@ These launchers provide a hassle-free way to run SPAMURAI without typing command
 ### Requirements
 - Python 3.8 or higher (usually pre-installed)
 - Or install via Homebrew: `brew install python3`
+- **Firebase credentials configured** (See FIREBASE_SETUP.md)
 
 ---
 
@@ -66,16 +68,47 @@ python -m streamlit run src/gui.py
 
 ---
 
+## First-Time Setup: Firebase Configuration
+
+⚠️ **IMPORTANT:** Before running the launcher for the first time, you MUST configure Firebase credentials.
+
+### Quick Setup (3 steps):
+
+1. **Get Firebase credentials:**
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Create a project (or use existing)
+   - Project Settings → Service Accounts → Generate New Private Key
+   - Download the JSON file
+
+2. **Run the setup script:**
+   ```bash
+   # Windows
+   setup_firebase.bat C:\path\to\your-credentials.json
+
+   # macOS
+   ./setup_firebase.sh /path/to/your-credentials.json
+   ```
+
+3. **Launch SPAMURAI:**
+   - Double-click the launcher
+   - It will verify Firebase credentials before starting
+
+For detailed Firebase setup instructions, see [FIREBASE_SETUP.md](../FIREBASE_SETUP.md)
+
+---
+
 ## First Run vs. Subsequent Runs
 
 ### First Run
 - Takes 2-5 minutes
 - Creates virtual environment
 - Downloads and installs all dependencies
+- Verifies Firebase credentials
 - You'll see installation progress
 
 ### Subsequent Runs
 - Takes 5-10 seconds
+- Verifies Firebase credentials
 - Skips installation (already done)
 - Directly launches GUI
 
@@ -121,6 +154,26 @@ Manually open your browser and go to:
 ```
 http://localhost:8501
 ```
+
+### "Firebase credentials not configured" error
+
+The launcher will stop with this error if Firebase is not set up:
+
+**Fix:**
+1. Follow the Firebase setup steps above
+2. Run the setup script: `setup_firebase.sh` (Mac) or `setup_firebase.bat` (Windows)
+3. Restart the launcher
+
+**Verify Firebase is set up:**
+```bash
+# Mac/Linux
+echo $FIREBASE_CREDENTIALS
+
+# Windows
+echo %FIREBASE_CREDENTIALS%
+```
+
+If the above shows nothing, Firebase environment variable is not set. Re-run the setup script.
 
 ---
 

@@ -138,6 +138,10 @@ def load_config():
     else:
         # Default config
         return {
+            "user_profile": {
+                "name": "",
+                "phone_number": ""
+            },
             "google_sheets_config": {
                 "messages": {"sheet_url": "", "tab_name": "Sheet1"},
                 "contacts": {"sheet_url": "", "tab_name": "Sheet1"}
@@ -293,7 +297,7 @@ config = st.session_state.config
 
 # Header
 st.title("🥷⚡ SPAMURAI")
-st.caption("Strike fast. Strike precise. Leave no trace.")
+st.caption("Each strike opens a window. Each message a potential possibility")
 
 # Tabs
 tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "🎯 Advanced Tactics"])
@@ -303,14 +307,14 @@ tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "
 # ============================================================================
 with tab1:
     st.markdown(f"""
-    ### The Way of the Digital Ninja
+    ### The Craft of the Spiritual Nurturer
 
     **Version:** {__version__}
 
-    > *"Strike fast. Strike precise. Leave no trace."*
+    > *"Each strike opens a window. Each message a potential possibility"*
 
-    SPAMURAI is the ultimate WhatsApp broadcast weapon, combining ancient ninja precision
-    with modern automation power. Master your campaigns with honor and stealth.
+    > *Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.*
+    > *Each message becomes an act of awareness, a quiet moment of stillness carried through action.*
 
     ---
 
@@ -348,13 +352,54 @@ with tab1:
     ### 🥋 The Code
     Forged with Python, Selenium, and Streamlit
 
-    *Train hard. Strike harder. Disappear without a trace.* 🥷
+    *Align within. Strike with awareness. Slip back into stillness.* 🥷
     """)
 
 # ============================================================================
 # TAB 2: Campaign Setup
 # ============================================================================
 with tab2:
+    # User Profile Section (Mandatory)
+    st.markdown("### 👤 User Profile")
+    st.caption("Your identity - required for all campaigns")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        user_name = st.text_input(
+            "Your Name *",
+            value=get_nested_config(config, "user_profile", "name", default=""),
+            placeholder="Enter your full name...",
+            help="This will be used as your default nickname"
+        )
+
+    with col2:
+        user_phone = st.text_input(
+            "Your Phone Number *",
+            value=get_nested_config(config, "user_profile", "phone_number", default=""),
+            placeholder="Enter your 10-digit phone number...",
+            help="This will be used as the test number for campaigns"
+        )
+
+    # Validation messages
+    validation_errors = []
+    if user_name and len(user_name.strip()) < 2:
+        validation_errors.append("❌ Name must be at least 2 characters")
+
+    if user_phone:
+        try:
+            normalized_phone = normalize_phone(user_phone)
+            if len(normalized_phone) != 10:
+                validation_errors.append("❌ Phone number must be exactly 10 digits")
+        except Exception:
+            validation_errors.append("❌ Invalid phone number format")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+
+    st.markdown("---")
+
     # Google Sheets Configuration
     st.markdown("### 📊 Google Sheets")
 
@@ -407,18 +452,46 @@ with tab2:
 
     with col1:
         if st.button("💾 Save Configuration", use_container_width=True, type="secondary"):
-            # Update config
-            update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
+            # Validate user profile
+            if not user_name or not user_name.strip():
+                st.error("🚫 Name is required!")
+            elif not user_phone or not user_phone.strip():
+                st.error("🚫 Phone number is required!")
+            elif validation_errors:
+                st.error("🚫 Fix validation errors before saving!")
+            else:
+                # Save user profile
+                if "user_profile" not in config:
+                    config["user_profile"] = {}
 
-            # Save to file and update session
-            save_and_update_session(config, "✅ Configuration saved successfully!")
+                config["user_profile"]["name"] = user_name.strip()
+                config["user_profile"]["phone_number"] = normalize_phone(user_phone)
+
+                # Update sheets config
+                update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
+
+                # Save to file and update session
+                save_and_update_session(config, "✅ Configuration saved successfully!")
 
     with col2:
         if st.button("⚡ Launch Strike", use_container_width=True, type="primary"):
-            # Validate required fields
-            if not messages_url or not contacts_url:
+            # Validate user profile first
+            if not user_name or not user_name.strip():
+                st.error("🚫 Strike aborted! Enter your name first.")
+            elif not user_phone or not user_phone.strip():
+                st.error("🚫 Strike aborted! Enter your phone number first.")
+            elif validation_errors:
+                st.error("🚫 Strike aborted! Fix validation errors first.")
+            elif not messages_url or not contacts_url:
                 st.error("🚫 Strike aborted! Enter Google Sheets URLs first.")
             else:
+                # Save user profile
+                if "user_profile" not in config:
+                    config["user_profile"] = {}
+
+                config["user_profile"]["name"] = user_name.strip()
+                config["user_profile"]["phone_number"] = normalize_phone(user_phone)
+
                 # Auto-save config before launching
                 update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
                 save_and_update_session(config)
