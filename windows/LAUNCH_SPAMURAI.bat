@@ -84,10 +84,10 @@ echo.
 echo [Step 4/5] Checking dependencies...
 echo.
 
-REM Check if streamlit is installed
-python -c "import streamlit" 2>nul
+REM Check if required packages are installed
+python -c "import streamlit; import firebase_admin" 2>nul
 if errorlevel 1 (
-    echo Streamlit not found. Installing dependencies...
+    echo Required packages not found. Installing dependencies...
     echo This may take a few minutes...
     echo.
 
@@ -119,10 +119,17 @@ if defined FIREBASE_CREDENTIALS (
     echo [OK] Firebase credentials found in environment variable
     set "FIREBASE_READY=1"
 ) else (
-    REM Check if credentials file exists
-    if exist "%PROJECT_DIR%\config\firebase-credentials.json" (
+    REM Check if credentials file exists (new naming: firebase.json)
+    if exist "%PROJECT_DIR%\config\firebase.json" (
         echo [OK] Firebase credentials file found
         set "FIREBASE_READY=1"
+    ) else (
+        REM Also check old naming for backward compatibility
+        if exist "%PROJECT_DIR%\config\firebase-credentials.json" (
+            echo [OK] Firebase credentials file found (old naming)
+            echo [NOTICE] Consider renaming to firebase.json for consistency
+            set "FIREBASE_READY=1"
+        )
     )
 )
 
@@ -131,17 +138,11 @@ if "%FIREBASE_READY%"=="0" (
     echo.
     echo Firebase is required for SPAMURAI to function.
     echo.
-    echo Please follow these steps:
-    echo   1. Get your Firebase credentials JSON file from:
-    echo      https://console.firebase.google.com/
-    echo      Project Settings -^> Service Accounts -^> Generate New Private Key
+    echo Please contact your POC to get the firebase.json file
     echo.
-    echo   2. Run the Firebase setup script:
-    echo      setup_firebase.bat C:\path\to\your-credentials.json
+    echo Save it as: config\firebase.json
     echo.
-    echo   3. Restart this launcher
-    echo.
-    echo See FIREBASE_SETUP.md for detailed instructions.
+    echo Then restart this launcher.
     echo.
     pause
     exit /b 1

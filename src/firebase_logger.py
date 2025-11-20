@@ -1,5 +1,36 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
+import sys
+import subprocess
+
+# Auto-install firebase-admin if not present
+try:
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+except ImportError:
+    print("\n" + "="*80)
+    print("Installing required dependency: firebase-admin")
+    print("="*80)
+    print("\nThis is a one-time setup. Please wait...")
+    print()
+
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "firebase-admin>=6.0.0"])
+        print("\n✓ firebase-admin installed successfully!")
+        print("="*80 + "\n")
+
+        # Import after installation
+        import firebase_admin
+        from firebase_admin import credentials, firestore
+    except subprocess.CalledProcessError as e:
+        print("\n" + "="*80)
+        print("ERROR: Failed to install firebase-admin!")
+        print("="*80)
+        print("\nPlease install it manually:")
+        print("  pip install firebase-admin")
+        print("\nOr install all dependencies:")
+        print("  pip install -r requirements.txt")
+        print("\n" + "="*80 + "\n")
+        raise
+
 from datetime import datetime
 import uuid
 import hashlib

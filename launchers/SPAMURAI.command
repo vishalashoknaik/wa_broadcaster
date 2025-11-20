@@ -87,8 +87,8 @@ echo ""
 echo -e "${CYAN}[Step 4/5]${NC} Checking dependencies..."
 echo ""
 
-if ! python -c "import streamlit" 2>/dev/null; then
-    echo "Streamlit not found. Installing dependencies..."
+if ! python -c "import streamlit; import firebase_admin" 2>/dev/null; then
+    echo "Required packages not found. Installing dependencies..."
     echo "This may take a few minutes..."
     echo ""
 
@@ -122,10 +122,17 @@ if [ -n "$FIREBASE_CREDENTIALS" ]; then
     echo -e "${GREEN}[OK]${NC} Firebase credentials found in environment variable"
     FIREBASE_READY=1
 else
-    # Check if credentials file exists
-    if [ -f "$PROJECT_DIR/config/firebase-credentials.json" ]; then
+    # Check if credentials file exists (new naming: firebase.json)
+    if [ -f "$PROJECT_DIR/config/firebase.json" ]; then
         echo -e "${GREEN}[OK]${NC} Firebase credentials file found"
         FIREBASE_READY=1
+    else
+        # Also check old naming for backward compatibility
+        if [ -f "$PROJECT_DIR/config/firebase-credentials.json" ]; then
+            echo -e "${GREEN}[OK]${NC} Firebase credentials file found (old naming)"
+            echo -e "${YELLOW}[NOTICE]${NC} Consider renaming to firebase.json for consistency"
+            FIREBASE_READY=1
+        fi
     fi
 fi
 
@@ -134,17 +141,11 @@ if [ $FIREBASE_READY -eq 0 ]; then
     echo ""
     echo "Firebase is required for SPAMURAI to function."
     echo ""
-    echo "Please follow these steps:"
-    echo "  1. Get your Firebase credentials JSON file from:"
-    echo "     https://console.firebase.google.com/"
-    echo "     Project Settings → Service Accounts → Generate New Private Key"
+    echo "Please contact your POC to get the firebase.json file"
     echo ""
-    echo "  2. Run the Firebase setup script:"
-    echo "     ./setup_firebase.sh /path/to/your-credentials.json"
+    echo "Save it as: config/firebase.json"
     echo ""
-    echo "  3. Restart this launcher"
-    echo ""
-    echo "See FIREBASE_SETUP.md for detailed instructions."
+    echo "Then restart this launcher."
     echo ""
     read -p "Press Enter to exit..."
     exit 1
