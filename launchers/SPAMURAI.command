@@ -84,7 +84,7 @@ echo -e "${GREEN}[OK]${NC} Virtual environment activated"
 echo ""
 
 # Step 4: Check and install dependencies
-echo -e "${CYAN}[Step 4/5]${NC} Checking dependencies..."
+echo -e "${CYAN}[Step 4/5]${NC} Checking and installing dependencies..."
 echo ""
 
 if ! python -c "import streamlit; import firebase_admin" 2>/dev/null; then
@@ -111,49 +111,40 @@ else
 fi
 echo ""
 
-# Step 5: Check Firebase credentials
-echo -e "${CYAN}[Step 5/6]${NC} Checking Firebase credentials..."
-echo ""
+# Check if Firebase credentials need setup (do this right after dependencies)
+if [ ! -f "$PROJECT_DIR/config/firebase.json" ] && [ ! -f "$PROJECT_DIR/config/firebase-credentials.json" ] && [ -z "$FIREBASE_CREDENTIALS" ]; then
+    echo -e "${CYAN}[Step 4b/5]${NC} Firebase credentials setup..."
+    echo ""
+    echo -e "${YELLOW}[NOTICE]${NC} Firebase credentials not found. Starting automatic setup..."
+    echo ""
 
-FIREBASE_READY=0
+    # Run automated Firebase setup
+    python src/firebase_auto_setup.py
 
-# Check if environment variable is set
-if [ -n "$FIREBASE_CREDENTIALS" ]; then
-    echo -e "${GREEN}[OK]${NC} Firebase credentials found in environment variable"
-    FIREBASE_READY=1
-else
-    # Check if credentials file exists (new naming: firebase.json)
-    if [ -f "$PROJECT_DIR/config/firebase.json" ]; then
-        echo -e "${GREEN}[OK]${NC} Firebase credentials file found"
-        FIREBASE_READY=1
-    else
-        # Also check old naming for backward compatibility
-        if [ -f "$PROJECT_DIR/config/firebase-credentials.json" ]; then
-            echo -e "${GREEN}[OK]${NC} Firebase credentials file found (old naming)"
-            echo -e "${YELLOW}[NOTICE]${NC} Consider renaming to firebase.json for consistency"
-            FIREBASE_READY=1
-        fi
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo -e "${RED}[ERROR]${NC} Firebase setup failed or was cancelled."
+        echo ""
+        echo "Please contact your POC if you need assistance."
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
     fi
+
+    # Verify credentials were created
+    if [ -f "$PROJECT_DIR/config/firebase.json" ]; then
+        echo -e "${GREEN}[OK]${NC} Firebase credentials configured successfully"
+    else
+        echo -e "${RED}[ERROR]${NC} Setup completed but credentials file not found!"
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+    echo ""
 fi
 
-if [ $FIREBASE_READY -eq 0 ]; then
-    echo -e "${RED}[ERROR]${NC} Firebase credentials not configured!"
-    echo ""
-    echo "Firebase is required for SPAMURAI to function."
-    echo ""
-    echo "Please contact your POC to get the firebase.json file"
-    echo ""
-    echo "Save it as: config/firebase.json"
-    echo ""
-    echo "Then restart this launcher."
-    echo ""
-    read -p "Press Enter to exit..."
-    exit 1
-fi
-echo ""
-
-# Step 6: Launch SPAMURAI
-echo -e "${CYAN}[Step 6/6]${NC} Launching SPAMURAI GUI..."
+# Step 5: Launch SPAMURAI
+echo -e "${CYAN}[Step 5/5]${NC} Launching SPAMURAI GUI..."
 echo ""
 echo "========================================="
 echo "  🚀 GUI will open in your browser"

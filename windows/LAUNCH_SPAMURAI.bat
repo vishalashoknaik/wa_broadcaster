@@ -81,7 +81,7 @@ if errorlevel 1 (
 echo [OK] Virtual environment activated
 echo.
 
-echo [Step 4/5] Checking dependencies...
+echo [Step 4/6] Checking and installing dependencies...
 echo.
 
 REM Check if required packages are installed
@@ -109,47 +109,42 @@ if errorlevel 1 (
 )
 echo.
 
-echo [Step 5/6] Checking Firebase credentials...
-echo.
+REM Check if Firebase credentials need setup (do this right after dependencies)
+if not exist "%PROJECT_DIR%\config\firebase.json" (
+    if not exist "%PROJECT_DIR%\config\firebase-credentials.json" (
+        if not defined FIREBASE_CREDENTIALS (
+            echo [Step 4b/6] Firebase credentials setup...
+            echo.
+            echo [NOTICE] Firebase credentials not found. Starting automatic setup...
+            echo.
 
-set "FIREBASE_READY=0"
+            REM Run automated Firebase setup
+            python src\firebase_auto_setup.py
 
-REM Check if environment variable is set
-if defined FIREBASE_CREDENTIALS (
-    echo [OK] Firebase credentials found in environment variable
-    set "FIREBASE_READY=1"
-) else (
-    REM Check if credentials file exists (new naming: firebase.json)
-    if exist "%PROJECT_DIR%\config\firebase.json" (
-        echo [OK] Firebase credentials file found
-        set "FIREBASE_READY=1"
-    ) else (
-        REM Also check old naming for backward compatibility
-        if exist "%PROJECT_DIR%\config\firebase-credentials.json" (
-            echo [OK] Firebase credentials file found (old naming)
-            echo [NOTICE] Consider renaming to firebase.json for consistency
-            set "FIREBASE_READY=1"
+            if errorlevel 1 (
+                echo.
+                echo [ERROR] Firebase setup failed or was cancelled.
+                echo.
+                echo Please contact your POC if you need assistance.
+                echo.
+                pause
+                exit /b 1
+            )
+
+            REM Verify credentials were created
+            if exist "%PROJECT_DIR%\config\firebase.json" (
+                echo [OK] Firebase credentials configured successfully
+            ) else (
+                echo [ERROR] Setup completed but credentials file not found!
+                echo.
+                pause
+                exit /b 1
+            )
+            echo.
         )
     )
 )
-
-if "%FIREBASE_READY%"=="0" (
-    echo [ERROR] Firebase credentials not configured!
-    echo.
-    echo Firebase is required for SPAMURAI to function.
-    echo.
-    echo Please contact your POC to get the firebase.json file
-    echo.
-    echo Save it as: config\firebase.json
-    echo.
-    echo Then restart this launcher.
-    echo.
-    pause
-    exit /b 1
-)
-echo.
-
-echo [Step 6/6] Launching SPAMURAI GUI...
+echo [Step 5/5] Launching SPAMURAI GUI...
 echo.
 echo =========================================
 echo   GUI will open in your browser
