@@ -87,7 +87,7 @@ echo ""
 echo -e "${CYAN}[Step 4/5]${NC} Checking and installing dependencies..."
 echo ""
 
-if ! python -c "import streamlit; import firebase_admin" 2>/dev/null; then
+if ! python3 -c "import streamlit; import firebase_admin" 2>/dev/null; then
     echo "Required packages not found. Installing dependencies..."
     echo "This may take a few minutes..."
     echo ""
@@ -119,7 +119,7 @@ if [ ! -f "$PROJECT_DIR/config/firebase.json" ] && [ ! -f "$PROJECT_DIR/config/f
     echo ""
 
     # Run automated Firebase setup
-    python src/firebase_auto_setup.py
+    python3 src/firebase_auto_setup.py
 
     if [ $? -ne 0 ]; then
         echo ""
@@ -155,7 +155,7 @@ echo "Press Ctrl+C to stop the server"
 echo ""
 
 # Launch Streamlit
-python -m streamlit run src/gui.py
+python3 -m streamlit run src/gui.py
 
 # If streamlit exits with error, pause to show message
 if [ $? -ne 0 ]; then
