@@ -41,36 +41,27 @@ if command -v git &> /dev/null; then
         REMOTE=$(git rev-parse origin/master)
 
         if [ "$LOCAL" != "$REMOTE" ]; then
-            echo -e "${YELLOW}⚡ New version available!${NC}"
+            echo -e "${YELLOW}⚡ New version available! Updating automatically...${NC}"
             echo ""
-            echo "Would you like to update now? (y/n)"
-            read -p "Update: " UPDATE_CHOICE
 
-            if [ "$UPDATE_CHOICE" = "y" ] || [ "$UPDATE_CHOICE" = "Y" ]; then
+            # Stash any local changes
+            if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+                git stash push -m "Auto-stash before update" &> /dev/null
+            fi
+
+            # Pull latest changes
+            if git pull origin master; then
                 echo ""
-                echo "Updating to latest version..."
-
-                # Stash any local changes
-                if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-                    git stash push -m "Auto-stash before update" &> /dev/null
-                fi
-
-                # Pull latest changes
-                if git pull origin master; then
-                    echo ""
-                    echo -e "${GREEN}✅ Updated successfully!${NC}"
-                    echo ""
-                    echo "Please re-run this script to use the latest version."
-                    echo ""
-                    read -p "Press Enter to exit..."
-                    exit 0
-                else
-                    echo ""
-                    echo -e "${RED}❌ Update failed${NC}"
-                    echo "Continuing with current version..."
-                fi
+                echo -e "${GREEN}✅ Updated successfully!${NC}"
+                echo ""
+                echo "Please re-run this script to use the latest version."
+                echo ""
+                read -p "Press Enter to exit..."
+                exit 0
             else
-                echo "Skipping update. Continuing with current version..."
+                echo ""
+                echo -e "${RED}❌ Update failed${NC}"
+                echo "Continuing with current version..."
             fi
         else
             echo -e "${GREEN}✓${NC} You're on the latest version"
