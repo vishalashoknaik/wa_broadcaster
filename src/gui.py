@@ -147,7 +147,7 @@ def load_config():
                 "contacts": {"sheet_url": "", "tab_name": "Sheet1"}
             },
             "followup_config": {"enabled": True, "delay_seconds": 3},
-            "default_delay": 15,
+            "default_delay": 60,
             "log_file": "config/whatsapp.log",
             "exclude_file": "config/exclude.txt",
             "sent_numbers_file": "config/sent_numbers.log",
@@ -442,7 +442,7 @@ with tab2:
         "Default Delay (seconds between messages)",
         min_value=1,
         max_value=300,
-        value=config.get("default_delay", 15),
+        value=config.get("default_delay", 60),
         help="Time to wait between sending messages to different contacts"
     )
 
@@ -492,8 +492,30 @@ with tab2:
                 config["user_profile"]["name"] = user_name.strip()
                 config["user_profile"]["phone_number"] = normalize_phone(user_phone)
 
-                # Auto-save config before launching
+                # Auto-save config before launching (including advanced tactics)
                 update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
+
+                # Save advanced tactics configuration
+                if "message_override" not in config:
+                    config["message_override"] = {}
+                config["message_override"]["enabled"] = override_enabled
+                if override_enabled:
+                    config["message_override"]["source"] = override_source
+                    if override_source == "quick_message":
+                        config["message_override"]["quick_message_text"] = quick_message_text
+
+                config["followup_config"]["enabled"] = followup_enabled
+                config["followup_config"]["delay_seconds"] = followup_delay
+                config["chrome_user_data"] = chrome_user_data
+                config["log_file"] = log_file
+                config["sent_numbers_file"] = sent_file
+                config["error_numbers_file"] = error_file
+                config["exclude_file"] = exclude_file
+                config["timeouts"] = {
+                    str(timeout_1_msg): timeout_1_min,
+                    str(timeout_2_msg): timeout_2_min
+                }
+
                 save_and_update_session(config)
 
                 # Show saving confirmation
