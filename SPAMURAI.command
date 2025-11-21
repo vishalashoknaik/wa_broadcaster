@@ -26,6 +26,59 @@ echo "  Strike fast. Strike precise."
 echo "========================================="
 echo ""
 
+# Step 0: Check for updates
+if command -v git &> /dev/null; then
+    echo -e "${CYAN}[Updates]${NC} Checking for latest version..."
+    echo ""
+
+    # Check if we're in a git repository
+    if [ -d ".git" ]; then
+        # Fetch latest changes quietly
+        git fetch origin master &> /dev/null
+
+        # Check if we're behind
+        LOCAL=$(git rev-parse HEAD)
+        REMOTE=$(git rev-parse origin/master)
+
+        if [ "$LOCAL" != "$REMOTE" ]; then
+            echo -e "${YELLOW}⚡ New version available!${NC}"
+            echo ""
+            echo "Would you like to update now? (y/n)"
+            read -p "Update: " UPDATE_CHOICE
+
+            if [ "$UPDATE_CHOICE" = "y" ] || [ "$UPDATE_CHOICE" = "Y" ]; then
+                echo ""
+                echo "Updating to latest version..."
+
+                # Stash any local changes
+                if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+                    git stash push -m "Auto-stash before update" &> /dev/null
+                fi
+
+                # Pull latest changes
+                if git pull origin master; then
+                    echo ""
+                    echo -e "${GREEN}✅ Updated successfully!${NC}"
+                    echo ""
+                    echo "Please re-run this script to use the latest version."
+                    echo ""
+                    read -p "Press Enter to exit..."
+                    exit 0
+                else
+                    echo ""
+                    echo -e "${RED}❌ Update failed${NC}"
+                    echo "Continuing with current version..."
+                fi
+            else
+                echo "Skipping update. Continuing with current version..."
+            fi
+        else
+            echo -e "${GREEN}✓${NC} You're on the latest version"
+        fi
+    fi
+    echo ""
+fi
+
 # Step 1: Check Python installation
 echo -e "${CYAN}[Step 1/5]${NC} Checking Python installation..."
 echo ""

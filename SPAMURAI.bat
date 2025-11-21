@@ -1,4 +1,4 @@
-@echo off
+ma@echo off
 REM ============================================================================
 REM SPAMURAI - WhatsApp Broadcast Ninja
 REM Strike fast. Strike precise. Leave no trace.
