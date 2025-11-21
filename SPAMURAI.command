@@ -27,30 +27,39 @@ echo "========================================="
 echo ""
 
 # Step 0: Check for updates
-if command -v git &> /dev/null; then
+# Determine Git command (portable or system)
+GIT_CMD=""
+if [ -x "../PortableGit/bin/git" ]; then
+    GIT_CMD="../PortableGit/bin/git"
+    echo -e "${CYAN}[Git]${NC} Using portable Git"
+elif command -v git &> /dev/null; then
+    GIT_CMD="git"
+fi
+
+if [ -n "$GIT_CMD" ]; then
     echo -e "${CYAN}[Updates]${NC} Checking for latest version..."
     echo ""
 
     # Check if we're in a git repository
     if [ -d ".git" ]; then
         # Fetch latest changes quietly
-        git fetch origin master &> /dev/null
+        $GIT_CMD fetch origin master &> /dev/null
 
         # Check if we're behind
-        LOCAL=$(git rev-parse HEAD)
-        REMOTE=$(git rev-parse origin/master)
+        LOCAL=$($GIT_CMD rev-parse HEAD)
+        REMOTE=$($GIT_CMD rev-parse origin/master)
 
         if [ "$LOCAL" != "$REMOTE" ]; then
             echo -e "${YELLOW}⚡ New version available! Updating automatically...${NC}"
             echo ""
 
             # Stash any local changes
-            if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-                git stash push -m "Auto-stash before update" &> /dev/null
+            if ! $GIT_CMD diff-index --quiet HEAD -- 2>/dev/null; then
+                $GIT_CMD stash push -m "Auto-stash before update" &> /dev/null
             fi
 
             # Pull latest changes
-            if git pull origin master; then
+            if $GIT_CMD pull origin master; then
                 echo ""
                 echo -e "${GREEN}✅ Updated successfully!${NC}"
                 echo ""
@@ -74,7 +83,17 @@ fi
 echo -e "${CYAN}[Step 1/5]${NC} Checking Python installation..."
 echo ""
 
-if ! command -v python3 &> /dev/null; then
+# Determine Python command (portable or system)
+PYTHON_CMD=""
+if [ -x "../python_311_spamurai/bin/python3" ]; then
+    PYTHON_CMD="../python_311_spamurai/bin/python3"
+    export PATH="../python_311_spamurai/bin:../python_311_spamurai:$PATH"
+    echo -e "${CYAN}[Python]${NC} Using portable Python"
+elif command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+fi
+
+if [ -z "$PYTHON_CMD" ]; then
     echo -e "${RED}[ERROR]${NC} Python 3 is not installed!"
     echo ""
     echo "Please install Python 3.8 or higher:"
@@ -85,7 +104,7 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
 echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION detected"
 echo ""
 
@@ -97,7 +116,7 @@ VENV_DIR="$PROJECT_DIR/venv"
 
 if [ ! -d "$VENV_DIR" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv "$VENV_DIR"
+    $PYTHON_CMD -m venv "$VENV_DIR"
 
     if [ $? -ne 0 ]; then
         echo -e "${RED}[ERROR]${NC} Failed to create virtual environment!"
@@ -131,7 +150,7 @@ echo ""
 echo -e "${CYAN}[Step 4/5]${NC} Checking and installing dependencies..."
 echo ""
 
-if ! python3 -c "import streamlit; import firebase_admin" 2>/dev/null; then
+if ! $PYTHON_CMD -c "import streamlit; import firebase_admin" 2>/dev/null; then
     echo "Required packages not found. Installing dependencies..."
     echo "This may take a few minutes..."
     echo ""
@@ -170,7 +189,7 @@ fi
 # Check if config.json has firebase_config section
 if [ -f "$PROJECT_DIR/config.json" ]; then
     # Use python to check if firebase_config exists in config.json
-    HAS_FIREBASE_CONFIG=$(python3 -c "import json; config = json.load(open('config.json')); print('yes' if 'firebase_config' in config else 'no')" 2>/dev/null || echo "no")
+    HAS_FIREBASE_CONFIG=$($PYTHON_CMD -c "import json; config = json.load(open('config.json')); print('yes' if 'firebase_config' in config else 'no')" 2>/dev/null || echo "no")
 
     if [ "$HAS_FIREBASE_CONFIG" = "no" ] || [ -z "$HAS_FIREBASE_CONFIG" ]; then
         NEEDS_FIREBASE_SETUP=true
@@ -187,7 +206,7 @@ if [ "$NEEDS_FIREBASE_SETUP" = "true" ]; then
     echo ""
 
     # Run automated Firebase setup
-    python3 src/firebase_auto_setup.py
+    $PYTHON_CMD src/firebase_auto_setup.py
 
     if [ $? -ne 0 ]; then
         echo ""
@@ -223,7 +242,7 @@ echo "Press Ctrl+C to stop the server"
 echo ""
 
 # Launch Streamlit
-python3 -m streamlit run src/gui.py
+$PYTHON_CMD -m streamlit run src/gui.py
 
 # If streamlit exits with error, pause to show message
 if [ $? -ne 0 ]; then
