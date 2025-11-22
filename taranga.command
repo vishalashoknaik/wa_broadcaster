@@ -144,34 +144,34 @@ if [ $? -ne 0 ]; then
 fi
 
 echo -e "${GREEN}[OK]${NC} Virtual environment activated"
+
+# Export venv's bin directory to PATH for child processes
+export PATH="$VENV_DIR/bin:$PATH"
+
 echo ""
 
-# Step 4: Check and install dependencies
-echo -e "${CYAN}[Step 4/5]${NC} Checking and installing dependencies..."
+# Step 4: Install dependencies
+echo -e "${CYAN}[Step 4/5]${NC} Installing/updating dependencies..."
 echo ""
 
-if ! $PYTHON_CMD -c "import streamlit" 2>/dev/null; then
-    echo "Required packages not found. Installing dependencies..."
-    echo "This may take a few minutes..."
+echo "Upgrading pip and installing requirements..."
+echo "This may take a few minutes..."
+echo ""
+
+pip install --upgrade pip > /dev/null 2>&1
+pip install -r requirements.txt
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}[ERROR]${NC} Failed to install dependencies!"
     echo ""
-
-    pip install --upgrade pip > /dev/null 2>&1
-    pip install -r requirements.txt
-
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}[ERROR]${NC} Failed to install dependencies!"
-        echo ""
-        echo "Please check your internet connection and try again."
-        echo ""
-        read -p "Press Enter to exit..."
-        exit 1
-    fi
-
+    echo "Please check your internet connection and try again."
     echo ""
-    echo -e "${GREEN}[OK]${NC} Dependencies installed successfully"
-else
-    echo -e "${GREEN}[OK]${NC} All dependencies are installed"
+    read -p "Press Enter to exit..."
+    exit 1
 fi
+
+echo ""
+echo -e "${GREEN}[OK]${NC} Dependencies ready"
 echo ""
 
 # Step 5: Launch SPAMURAI
