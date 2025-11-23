@@ -299,6 +299,24 @@ config = st.session_state.config
 st.title("🥷⚡ SPAMURAI")
 st.caption("Each strike opens a window. Each message a potential possibility")
 
+# Initialize default values for advanced settings (used in Tab 2 but defined in Tab 3)
+# This prevents NameError if user clicks "Launch Strike" without visiting Tab 3
+override_enabled = get_nested_config(config, "message_override", "enabled", default=False)
+override_source = get_nested_config(config, "message_override", "source", default="sadhguru_quote")
+quick_message_text = get_nested_config(config, "message_override", "quick_message_text", default="")
+followup_enabled = get_nested_config(config, "followup_config", "enabled", default=True)
+followup_delay = get_nested_config(config, "followup_config", "delay_seconds", default=3)
+chrome_user_data = config.get("chrome_user_data", "/tmp/WhatsAppSession/Session1")
+log_file = config.get("log_file", "config/whatsapp.log")
+sent_file = config.get("sent_numbers_file", "config/sent_numbers.log")
+error_file = config.get("error_numbers_file", "config/failed_numbers.log")
+exclude_file = config.get("exclude_file", "config/exclude.txt")
+timeouts = config.get("timeouts", {"100": 30, "300": 30})
+timeout_1_msg = 100
+timeout_2_msg = 300
+timeout_1_min = timeouts.get("100", 30)
+timeout_2_min = timeouts.get("300", 30)
+
 # Tabs
 tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "🎯 Advanced Tactics"])
 
@@ -545,7 +563,7 @@ with tab3:
 
     override_enabled = st.checkbox(
         "Override Google Sheet Messages",
-        value=get_nested_config(config, "message_override", "enabled", default=False),
+        value=override_enabled,
         help="When enabled, use alternative message source instead of Messages Google Sheet"
     )
 
@@ -555,7 +573,7 @@ with tab3:
             "Select Message Source",
             options=["sadhguru_quote", "quick_message"],
             format_func=lambda x: "🕉️ Sadhguru Quote" if x == "sadhguru_quote" else "✉️ Quick Message",
-            index=0 if get_nested_config(config, "message_override", "source", default="sadhguru_quote") == "sadhguru_quote" else 1,
+            index=0 if override_source == "sadhguru_quote" else 1,
             help="Choose your message source"
         )
 
@@ -563,7 +581,7 @@ with tab3:
         if override_source == "quick_message":
             quick_message_text = st.text_area(
                 "Quick Message",
-                value=get_nested_config(config, "message_override", "quick_message_text", default=""),
+                value=quick_message_text,
                 placeholder="Enter your message here...",
                 height=150,
                 help="This message will be sent to all contacts"
@@ -576,7 +594,7 @@ with tab3:
 
     followup_enabled = st.checkbox(
         "Enable followup messages",
-        value=get_nested_config(config, "followup_config", "enabled", default=True),
+        value=followup_enabled,
         help="Send a second message immediately after the first"
     )
 
@@ -584,7 +602,7 @@ with tab3:
         "Followup delay (seconds)",
         min_value=1,
         max_value=60,
-        value=get_nested_config(config, "followup_config", "delay_seconds", default=3),
+        value=followup_delay,
         help="Time to wait before sending the followup message"
     )
 
@@ -593,7 +611,7 @@ with tab3:
 
     chrome_user_data = st.text_input(
         "Chrome User Data Path",
-        value=config.get("chrome_user_data", "/tmp/WhatsAppSession/Session1"),
+        value=chrome_user_data,
         help="Path to Chrome profile directory for persistent WhatsApp Web session"
     )
 
@@ -603,12 +621,12 @@ with tab3:
     col1, col2 = st.columns(2)
 
     with col1:
-        log_file = st.text_input("Log File", value=config.get("log_file", "config/whatsapp.log"))
-        sent_file = st.text_input("Sent Numbers File", value=config.get("sent_numbers_file", "config/sent_numbers.log"))
+        log_file = st.text_input("Log File", value=log_file)
+        sent_file = st.text_input("Sent Numbers File", value=sent_file)
 
     with col2:
-        error_file = st.text_input("Error Numbers File", value=config.get("error_numbers_file", "config/failed_numbers.log"))
-        exclude_file = st.text_input("Exclude File", value=config.get("exclude_file", "config/exclude.txt"))
+        error_file = st.text_input("Error Numbers File", value=error_file)
+        exclude_file = st.text_input("Exclude File", value=exclude_file)
 
     # Timeouts
     st.markdown("### ⏸️ Timeouts")
@@ -616,15 +634,13 @@ with tab3:
 
     col1, col2 = st.columns(2)
 
-    timeouts = config.get("timeouts", {"100": 30, "300": 30})
-
     with col1:
-        timeout_1_msg = st.number_input("After messages", value=100, min_value=1, key="timeout_1_msg")
-        timeout_2_msg = st.number_input("After messages", value=300, min_value=1, key="timeout_2_msg")
+        timeout_1_msg = st.number_input("After messages", value=timeout_1_msg, min_value=1, key="timeout_1_msg")
+        timeout_2_msg = st.number_input("After messages", value=timeout_2_msg, min_value=1, key="timeout_2_msg")
 
     with col2:
-        timeout_1_min = st.number_input("Wait (minutes)", value=timeouts.get("100", 30), min_value=1, key="timeout_1_min")
-        timeout_2_min = st.number_input("Wait (minutes)", value=timeouts.get("300", 30), min_value=1, key="timeout_2_min")
+        timeout_1_min = st.number_input("Wait (minutes)", value=timeout_1_min, min_value=1, key="timeout_1_min")
+        timeout_2_min = st.number_input("Wait (minutes)", value=timeout_2_min, min_value=1, key="timeout_2_min")
 
     # Save Advanced Settings
     st.markdown("")  # Small spacing
