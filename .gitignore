@@ -9,10 +9,8 @@
 /src/__pycache__
 /src/WaBroadcaster.iml
 /src/wa_broadcaster.spec
-# Config folder (ignore everything except example)
-config/*
-!config/config.example.json
-config.json
+# Config folder (auto-created, not tracked)
+config/
 
 # Virtual environment
 venv/
