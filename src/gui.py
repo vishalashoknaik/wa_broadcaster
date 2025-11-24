@@ -381,7 +381,7 @@ with tab2:
     st.markdown("### 👤 User Profile")
     st.caption("Your identity - required for all campaigns")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         user_name = st.text_input(
@@ -397,6 +397,37 @@ with tab2:
             value=get_nested_config(config, "user_profile", "phone_number", default=""),
             placeholder="Enter your 10-digit phone number...",
             help="This will be used as the test number for campaigns"
+        )
+
+    with col3:
+        # Center dropdown with valid options
+        center_options = [
+            "B G Road",
+            "Malleshwaram",
+            "Hebbal",
+            "Electronic City",
+            "Bansawadi",
+            "Jayanagar",
+            "Vijayanagar",
+            "Marathalli",
+            "Whitefield",
+            "Koramangala",
+            "Indiranagar"
+        ]
+
+        current_center = get_nested_config(config, "user_profile", "center", default="")
+
+        # If current center is in the list, use its index; otherwise default to first option
+        if current_center in center_options:
+            default_index = center_options.index(current_center)
+        else:
+            default_index = 0
+
+        user_center = st.selectbox(
+            "Your Center *",
+            options=center_options,
+            index=default_index,
+            help="Select your center - this will be logged with all messages sent"
         )
 
     # Validation messages
@@ -475,6 +506,8 @@ with tab2:
                 st.error("🚫 Name is required!")
             elif not user_phone or not user_phone.strip():
                 st.error("🚫 Phone number is required!")
+            elif not user_center or not user_center.strip():
+                st.error("🚫 Center is required!")
             elif validation_errors:
                 st.error("🚫 Fix validation errors before saving!")
             else:
@@ -484,6 +517,7 @@ with tab2:
 
                 config["user_profile"]["name"] = user_name.strip()
                 config["user_profile"]["phone_number"] = normalize_phone(user_phone)
+                config["user_profile"]["center"] = user_center
 
                 # Update sheets config
                 update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
@@ -498,6 +532,8 @@ with tab2:
                 st.error("🚫 Strike aborted! Enter your name first.")
             elif not user_phone or not user_phone.strip():
                 st.error("🚫 Strike aborted! Enter your phone number first.")
+            elif not user_center or not user_center.strip():
+                st.error("🚫 Strike aborted! Select your center first.")
             elif validation_errors:
                 st.error("🚫 Strike aborted! Fix validation errors first.")
             elif not messages_url or not contacts_url:
@@ -509,6 +545,7 @@ with tab2:
 
                 config["user_profile"]["name"] = user_name.strip()
                 config["user_profile"]["phone_number"] = normalize_phone(user_phone)
+                config["user_profile"]["center"] = user_center
 
                 # Auto-save config before launching (including advanced tactics)
                 update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)

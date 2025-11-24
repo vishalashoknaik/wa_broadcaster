@@ -141,13 +141,15 @@ class FirebaseLogger:
             user_profile = self.config.get('user_profile', {})
             sender_name = user_profile.get('name', '')
             sender_phone = user_profile.get('phone_number', '')
+            sender_center = user_profile.get('center', '')
 
             event = {
                 'event_type': 'message_sent',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
                 'sender': {
                     'name': sender_name,
-                    'phone': sender_phone
+                    'phone': sender_phone,
+                    'center': sender_center
                 },
                 'recipient': {
                     'name': name,
@@ -188,13 +190,15 @@ class FirebaseLogger:
             user_profile = self.config.get('user_profile', {})
             sender_name = user_profile.get('name', '')
             sender_phone = user_profile.get('phone_number', '')
+            sender_center = user_profile.get('center', '')
 
             event = {
                 'event_type': 'message_failed',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
                 'sender': {
                     'name': sender_name,
-                    'phone': sender_phone
+                    'phone': sender_phone,
+                    'center': sender_center
                 },
                 'recipient': {
                     'name': name,
