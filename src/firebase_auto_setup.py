@@ -10,9 +10,10 @@ import tempfile
 import json
 import re
 from pathlib import Path
+import urllib.request
 
 # Hardcoded Google Drive URL for Firebase credentials
-FIREBASE_CREDENTIALS_URL = "https://drive.google.com/file/d/1G7Apo59Z9e30pM4fSBgmyMJLeRc3QDoo/view?usp=drive_link"
+FIREBASE_CREDENTIALS_URL = "https://drive.google.com/file/d/1G7Apo59Z9e30pM4fSBgmyMJLeRc3QD343/view?usp=drive_link"
 
 # Auto-install gdown if not present (for Google Drive downloads)
 try:
@@ -122,7 +123,9 @@ def _download_and_extract(drive_url, password, credentials_path):
         # Step 1: Download from Google Drive
         print("📥 Downloading credentials from Google Drive...")
         try:
-            gdown.download(drive_url, str(zip_path), quiet=False, fuzzy=True)
+
+            url = "https://raw.githubusercontent.com/vishalashoknaik/releases/downloads/firebase_credentials.zip"
+            urllib.request.urlretrieve(url, zip_path)
 
             if not zip_path.exists():
                 print("❌ Download failed. File not found.")

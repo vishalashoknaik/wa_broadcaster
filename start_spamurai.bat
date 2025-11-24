@@ -8,6 +8,7 @@ echo.
 echo SPAMURAI - WhatsApp Broadcast Ninja
 echo ======================================
 echo.
+SETLOCAL ENABLEDELAYEDEXPANSION
 
 set PATH=..\python_311_spamurai;..\python_311_spamurai\Scripts;%PATH%
 
@@ -52,16 +53,17 @@ set SCRIPT_DIR=%~dp0
 set PROJECT_DIR=%SCRIPT_DIR%
 
 REM Check if firebase.json exists
-if not exist "%PROJECT_DIR%config\firebase.json" (
-    if not exist "%PROJECT_DIR%config\firebase-credentials.json" (
+if not exist "%PROJECT_DIR%\config\firebase.json" (
+    if not exist "%PROJECT_DIR%\config\firebase-credentials.json" (
         if not defined FIREBASE_CREDENTIALS (
+            echo needs firebase setup
             set NEEDS_FIREBASE_SETUP=true
         )
     )
 )
 
 REM Check if config.json has firebase_config section
-if exist "%PROJECT_DIR%config.json" (
+if exist "%PROJECT_DIR%\config.json" (
     for /f "delims=" %%i in ('python -c "import json; config = json.load(open('config.json')); print('yes' if 'firebase_config' in config else 'no')" 2^>nul') do set HAS_FIREBASE_CONFIG=%%i
     if "!HAS_FIREBASE_CONFIG!" == "no" set NEEDS_FIREBASE_SETUP=true
     if "!HAS_FIREBASE_CONFIG!" == "" set NEEDS_FIREBASE_SETUP=true
@@ -90,7 +92,7 @@ if "!NEEDS_FIREBASE_SETUP!" == "true" (
     )
 
     REM Verify credentials were created and config updated
-    if exist "%PROJECT_DIR%config\firebase.json" (
+    if exist "%PROJECT_DIR%\config\firebase.json" (
         echo [OK] Firebase credentials configured successfully
         echo.
     ) else (
