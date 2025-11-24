@@ -7,7 +7,7 @@ import platform
 from lib import normalize_phone
 
 # Add version
-__version__ = "1.10.2"
+__version__ = "1.11.0"
 
 # Page config
 st.set_page_config(
@@ -255,28 +255,30 @@ def launch_terminal_process(script_path, config_path):
     """
     try:
         if platform.system() == "Windows":
-            # Use CREATE_NEW_CONSOLE flag to properly detach the process
-            # Close pipes to prevent deadlock when parent doesn't read them
-            # process = subprocess.Popen(
-            #     ['cmd', '/k', 'python', script_path, '--config', config_path],
-            #     creationflags=subprocess.CREATE_NEW_CONSOLE,
-            #     stdin=subprocess.DEVNULL,
-            #     stdout=subprocess.DEVNULL,
-            #     stderr=subprocess.DEVNULL
-            # )
-            command = ' '.join(['python', script_path, '--config', config_path])
+            # Use venv Python on Windows (venv\Scripts\python.exe)
+            venv_python = os.path.join(os.getcwd(), 'venv', 'Scripts', 'python.exe')
+            # Fallback to system python if venv doesn't exist
+            if not os.path.exists(venv_python):
+                venv_python = 'python'
+
+            command = ' '.join([venv_python, script_path, '--config', config_path])
             print("Executing system command", command)
             os.system(command)
 
         elif platform.system() == "Darwin":  # macOS
+            # Export venv/bin to PATH in the new terminal, then run python3
+            venv_bin = os.path.join(os.getcwd(), 'venv', 'bin')
             process = subprocess.Popen([
                 'osascript', '-e',
-                f'tell application "Terminal" to do script "cd {os.getcwd()} && python3 {script_path} --config {config_path}"'
+                f'tell application "Terminal" to do script "cd {os.getcwd()} && export PATH={venv_bin}:$PATH && python3 {script_path} --config {config_path}"'
             ])
         else:  # Linux
+            # Export venv/bin to PATH and run python3
+            venv_bin = os.path.join(os.getcwd(), 'venv', 'bin')
             process = subprocess.Popen([
                 'x-terminal-emulator', '-e',
-                'python3', script_path, '--config', config_path
+                'bash', '-c',
+                f'export PATH={venv_bin}:$PATH && python3 {script_path} --config {config_path}; exec bash'
             ])
         return process
     except Exception as e:
