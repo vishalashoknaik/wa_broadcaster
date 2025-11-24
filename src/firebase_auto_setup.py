@@ -44,8 +44,8 @@ def setup_firebase_credentials(credentials_path="config/firebase.json"):
     print("FIREBASE CREDENTIALS SETUP")
     print("="*80)
     print("\nFirebase credentials not found. Let's set them up!")
-    print("\nYou'll need the password for the credential zip.")
-    print("(Get this password from your POC)")
+    print("\n⚠️  IMPORTANT: You need a password to extract the credentials.")
+    print("📞 Please ask your POC (Point of Contact) for the zip password.")
     print("\n" + "="*80 + "\n")
 
     # Step 1: Get zip password
@@ -75,9 +75,9 @@ def setup_firebase_credentials(credentials_path="config/firebase.json"):
             print("❌ SETUP FAILED")
             print("="*80)
             print("\nPlease verify:")
-            print("  1. The password is correct")
+            print("  1. The password is correct (ask your POC for the correct password)")
             print("  2. You have internet connectivity")
-            print("\nContact your POC if the problem persists.")
+            print("\n📞 Contact your POC if the problem persists.")
             print("="*80 + "\n")
             return False
 
@@ -91,8 +91,8 @@ def _prompt_password():
     """Prompt user for zip password"""
     print("Credential Zip Password")
     print("-" * 80)
-    print("Enter the password for the credential zip file.")
-    print("(This password is provided by your POC)")
+    print("📞 Ask your POC (Point of Contact) for the zip password.")
+    print("Then enter the password below to continue.")
     print()
 
     # Try to use getpass for hidden input, fallback to regular input
@@ -148,7 +148,8 @@ def _download_and_extract(drive_url, password, credentials_path):
 
         except RuntimeError as e:
             if 'Bad password' in str(e):
-                print("❌ Incorrect password. Please try again.")
+                print("❌ Incorrect password.")
+                print("📞 Please contact your POC for the correct zip password.")
             else:
                 print(f"❌ Extraction failed: {str(e)}")
             return False
