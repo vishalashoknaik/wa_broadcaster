@@ -161,21 +161,40 @@ echo -e "${CYAN}[Step 4/7]${NC} Checking Python installation..."
 echo ""
 
 PYTHON_NEEDS_INSTALL=false
+PYTHON_CMD="python3"
 
-if ! command -v python3 &> /dev/null; then
-    echo -e "${YELLOW}Python 3 not found.${NC}"
-    PYTHON_NEEDS_INSTALL=true
-else
+# Check for Python 3.11+ first (preferred)
+if command -v python3.11 &> /dev/null; then
+    PYTHON_CMD="python3.11"
+    PYTHON_VERSION=$(python3.11 --version 2>&1 | awk '{print $2}')
+    echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION detected (using python3.11)"
+elif command -v python3.10 &> /dev/null; then
+    PYTHON_CMD="python3.10"
+    PYTHON_VERSION=$(python3.10 --version 2>&1 | awk '{print $2}')
+    echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION detected (using python3.10)"
+elif command -v python3 &> /dev/null; then
     PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
     PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
     PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
 
-    if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 8 ]); then
-        echo -e "${YELLOW}Python $PYTHON_VERSION found, but 3.8+ required.${NC}"
-        PYTHON_NEEDS_INSTALL=true
+    if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]); then
+        echo -e "${YELLOW}Python $PYTHON_VERSION found, but 3.10+ recommended.${NC}"
+        echo -e "${YELLOW}Your Python version is past end-of-life and may have compatibility issues.${NC}"
+        echo ""
+        echo "Would you like to install Python 3.11? (y/n)"
+        read -r response
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            PYTHON_NEEDS_INSTALL=true
+        else
+            echo -e "${YELLOW}Continuing with Python $PYTHON_VERSION...${NC}"
+            echo -e "${YELLOW}Note: You may encounter dependency or security issues.${NC}"
+        fi
     else
         echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION detected"
     fi
+else
+    echo -e "${YELLOW}Python 3 not found.${NC}"
+    PYTHON_NEEDS_INSTALL=true
 fi
 echo ""
 
@@ -217,14 +236,14 @@ if [ "$PYTHON_NEEDS_INSTALL" = true ]; then
     echo ""
 
     # Step 6: Install Python via Homebrew
-    echo -e "${CYAN}[Step 6/7]${NC} Installing Python 3..."
+    echo -e "${CYAN}[Step 6/7]${NC} Installing Python 3.11..."
     echo ""
 
-    echo "Installing Python 3 via Homebrew..."
+    echo "Installing Python 3.11 via Homebrew..."
     echo "This may take a few minutes..."
     echo ""
 
-    brew install python3
+    brew install python@3.11
 
     if [ $? -ne 0 ]; then
         echo ""
@@ -235,8 +254,14 @@ if [ "$PYTHON_NEEDS_INSTALL" = true ]; then
         exit 1
     fi
 
-    # Verify Python installation
-    if ! command -v python3 &> /dev/null; then
+    # Verify Python installation and set PYTHON_CMD
+    if command -v python3.11 &> /dev/null; then
+        PYTHON_CMD="python3.11"
+        PYTHON_VERSION=$(python3.11 --version 2>&1 | awk '{print $2}')
+        echo ""
+        echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION installed successfully!"
+        echo ""
+    else
         echo ""
         echo -e "${RED}[ERROR]${NC} Python installation verification failed!"
         echo ""
@@ -244,11 +269,6 @@ if [ "$PYTHON_NEEDS_INSTALL" = true ]; then
         read
         exit 1
     fi
-
-    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
-    echo ""
-    echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION installed successfully!"
-    echo ""
 else
     echo -e "${CYAN}[Step 5/7]${NC} Homebrew check skipped (Python already installed)"
     echo ""
@@ -268,8 +288,8 @@ if [ -d "$VENV_PATH" ]; then
     rm -rf "$VENV_PATH"
 fi
 
-echo "Creating virtual environment..."
-python3 -m venv "$VENV_PATH"
+echo "Creating virtual environment with $PYTHON_CMD..."
+$PYTHON_CMD -m venv "$VENV_PATH"
 
 if [ $? -ne 0 ]; then
     echo ""
@@ -333,7 +353,7 @@ echo ""
 echo "📁 Location: $FULL_PATH"
 echo ""
 echo -e "${GREEN}Python Environment:${NC}"
-echo "  • Python: $(python3 --version | awk '{print $2}')"
+echo "  • Python: $PYTHON_VERSION ($PYTHON_CMD)"
 echo "  • Virtual Environment: $VENV_PATH"
 echo "  • Dependencies: Installed"
 echo ""

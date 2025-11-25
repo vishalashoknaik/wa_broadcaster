@@ -84,11 +84,18 @@ echo -e "${CYAN}[Step 1/5]${NC} Checking Python installation..."
 echo ""
 
 # Determine Python command (portable or system)
+# Prefer Python 3.11, then 3.10, then any python3
 PYTHON_CMD=""
+PYTHON_VERSION=""
+
 if [ -x "../python_311_spamurai/bin/python3" ]; then
     PYTHON_CMD="../python_311_spamurai/bin/python3"
     export PATH="../python_311_spamurai/bin:../python_311_spamurai:$PATH"
     echo -e "${CYAN}[Python]${NC} Using portable Python"
+elif command -v python3.11 &> /dev/null; then
+    PYTHON_CMD="python3.11"
+elif command -v python3.10 &> /dev/null; then
+    PYTHON_CMD="python3.10"
 elif command -v python3 &> /dev/null; then
     PYTHON_CMD="python3"
 fi
@@ -96,16 +103,29 @@ fi
 if [ -z "$PYTHON_CMD" ]; then
     echo -e "${RED}[ERROR]${NC} Python 3 is not installed!"
     echo ""
-    echo "Please install Python 3.8 or higher:"
+    echo "Please install Python 3.10 or higher:"
     echo "  - Visit: https://www.python.org/downloads/"
-    echo "  - Or use Homebrew: brew install python3"
+    echo "  - Or use Homebrew: brew install python@3.11"
     echo ""
     read -p "Press Enter to exit..."
     exit 1
 fi
 
 PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
-echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION detected"
+PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
+PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
+
+# Check if Python version is too old
+if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]); then
+    echo -e "${YELLOW}[WARNING]${NC} Python $PYTHON_VERSION detected (using $PYTHON_CMD)"
+    echo -e "${YELLOW}Python 3.10+ is recommended. Your version may have compatibility issues.${NC}"
+    echo ""
+    echo "Consider upgrading: brew install python@3.11"
+    echo ""
+    read -p "Press Enter to continue anyway (or Ctrl+C to exit)..."
+else
+    echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION detected (using $PYTHON_CMD)"
+fi
 echo ""
 
 # Step 2: Set up virtual environment
@@ -113,9 +133,35 @@ echo -e "${CYAN}[Step 2/5]${NC} Setting up virtual environment..."
 echo ""
 
 VENV_DIR="$PROJECT_DIR/venv"
+RECREATE_VENV=false
 
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment..."
+if [ -d "$VENV_DIR" ]; then
+    # Check if existing venv uses an old Python version
+    if [ -f "$VENV_DIR/bin/python" ]; then
+        VENV_PYTHON_VERSION=$("$VENV_DIR/bin/python" --version 2>&1 | awk '{print $2}')
+        VENV_MAJOR=$(echo $VENV_PYTHON_VERSION | cut -d. -f1)
+        VENV_MINOR=$(echo $VENV_PYTHON_VERSION | cut -d. -f2)
+
+        if [ "$VENV_MAJOR" -lt 3 ] || ([ "$VENV_MAJOR" -eq 3 ] && [ "$VENV_MINOR" -lt 10 ]); then
+            echo -e "${YELLOW}[WARNING]${NC} Virtual environment uses Python $VENV_PYTHON_VERSION (outdated)"
+            echo "System has Python $PYTHON_VERSION available"
+            echo ""
+            echo "Recreating virtual environment with newer Python..."
+            RECREATE_VENV=true
+        else
+            echo -e "${GREEN}[OK]${NC} Virtual environment exists (Python $VENV_PYTHON_VERSION)"
+        fi
+    else
+        echo -e "${GREEN}[OK]${NC} Virtual environment already exists"
+    fi
+fi
+
+if [ ! -d "$VENV_DIR" ] || [ "$RECREATE_VENV" = true ]; then
+    if [ "$RECREATE_VENV" = true ]; then
+        rm -rf "$VENV_DIR"
+    fi
+
+    echo "Creating virtual environment with $PYTHON_CMD..."
     $PYTHON_CMD -m venv "$VENV_DIR"
 
     if [ $? -ne 0 ]; then
@@ -125,8 +171,6 @@ if [ ! -d "$VENV_DIR" ]; then
         exit 1
     fi
     echo -e "${GREEN}[OK]${NC} Virtual environment created"
-else
-    echo -e "${GREEN}[OK]${NC} Virtual environment already exists"
 fi
 echo ""
 

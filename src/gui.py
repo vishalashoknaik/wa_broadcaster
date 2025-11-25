@@ -195,6 +195,14 @@ def update_sheets_config(config, messages_url, messages_tab, contacts_url, conta
         contacts_tab: Contacts sheet tab name
         delay: Default delay between messages
     """
+    # Ensure google_sheets_config section exists
+    if "google_sheets_config" not in config:
+        config["google_sheets_config"] = {}
+    if "messages" not in config["google_sheets_config"]:
+        config["google_sheets_config"]["messages"] = {}
+    if "contacts" not in config["google_sheets_config"]:
+        config["google_sheets_config"]["contacts"] = {}
+
     config["google_sheets_config"]["messages"]["sheet_url"] = messages_url
     config["google_sheets_config"]["messages"]["tab_name"] = messages_tab
     config["google_sheets_config"]["contacts"]["sheet_url"] = contacts_url
@@ -561,6 +569,8 @@ with tab2:
                     if override_source == "quick_message":
                         config["message_override"]["quick_message_text"] = quick_message_text
 
+                if "followup_config" not in config:
+                    config["followup_config"] = {}
                 config["followup_config"]["enabled"] = followup_enabled
                 config["followup_config"]["delay_seconds"] = followup_delay
                 config["chrome_user_data"] = chrome_user_data
@@ -695,6 +705,8 @@ with tab3:
                 config["message_override"]["quick_message_text"] = quick_message_text
 
         # Followup Configuration
+        if "followup_config" not in config:
+            config["followup_config"] = {}
         config["followup_config"]["enabled"] = followup_enabled
         config["followup_config"]["delay_seconds"] = followup_delay
         config["chrome_user_data"] = chrome_user_data
