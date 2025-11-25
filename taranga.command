@@ -202,8 +202,9 @@ echo "Upgrading pip and installing requirements..."
 echo "This may take a few minutes..."
 echo ""
 
-pip install --upgrade pip > /dev/null 2>&1
-pip install -r requirements.txt
+# Use venv's pip explicitly
+python -m pip install --upgrade pip > /dev/null 2>&1
+python -m pip install -r requirements.txt
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}[ERROR]${NC} Failed to install dependencies!"
@@ -229,8 +230,8 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-# Launch Streamlit
-$PYTHON_CMD -m streamlit run src/gui.py
+# Launch Streamlit (use venv's python, not system python)
+python -m streamlit run src/gui.py
 
 # If streamlit exits with error, pause to show message
 if [ $? -ne 0 ]; then
