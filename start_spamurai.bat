@@ -54,12 +54,8 @@ set PROJECT_DIR=%SCRIPT_DIR%
 
 REM Check if firebase.json exists
 if not exist "%PROJECT_DIR%\config\firebase.json" (
-    if not exist "%PROJECT_DIR%\config\firebase-credentials.json" (
-        if not defined FIREBASE_CREDENTIALS (
-            echo needs firebase setup
-            set NEEDS_FIREBASE_SETUP=true
-        )
-    )
+    echo needs firebase setup
+    set NEEDS_FIREBASE_SETUP=true
 )
 
 REM Check if config.json has firebase_config section

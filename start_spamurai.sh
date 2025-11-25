@@ -48,7 +48,7 @@ echo ""
 NEEDS_FIREBASE_SETUP=false
 
 # Check if firebase.json exists
-if [ ! -f "$SCRIPT_DIR/config/firebase.json" ] && [ ! -f "$SCRIPT_DIR/config/firebase-credentials.json" ] && [ -z "$FIREBASE_CREDENTIALS" ]; then
+if [ ! -f "$SCRIPT_DIR/config/firebase.json" ]; then
     NEEDS_FIREBASE_SETUP=true
 fi
 

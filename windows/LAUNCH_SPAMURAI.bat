@@ -118,11 +118,7 @@ set NEEDS_FIREBASE_SETUP=false
 
 REM Check if firebase.json exists
 if not exist "%PROJECT_DIR%\config\firebase.json" (
-    if not exist "%PROJECT_DIR%\config\firebase-credentials.json" (
-        if not defined FIREBASE_CREDENTIALS (
-            set NEEDS_FIREBASE_SETUP=true
-        )
-    )
+    set NEEDS_FIREBASE_SETUP=true
 )
 
 REM Check if config.json has firebase_config section
