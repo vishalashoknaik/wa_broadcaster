@@ -1,5 +1,36 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
+import sys
+import subprocess
+
+# Auto-install firebase-admin if not present
+try:
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+except ImportError:
+    print("\n" + "="*80)
+    print("Installing required dependency: firebase-admin")
+    print("="*80)
+    print("\nThis is a one-time setup. Please wait...")
+    print()
+
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "firebase-admin>=6.0.0"])
+        print("\n✓ firebase-admin installed successfully!")
+        print("="*80 + "\n")
+
+        # Import after installation
+        import firebase_admin
+        from firebase_admin import credentials, firestore
+    except subprocess.CalledProcessError as e:
+        print("\n" + "="*80)
+        print("ERROR: Failed to install firebase-admin!")
+        print("="*80)
+        print("\nPlease install it manually:")
+        print("  pip install firebase-admin")
+        print("\nOr install all dependencies:")
+        print("  pip install -r requirements.txt")
+        print("\n" + "="*80 + "\n")
+        raise
+
 from datetime import datetime
 import uuid
 import hashlib
@@ -35,41 +66,25 @@ class FirebaseLogger:
     def _initialize_firebase(self):
         """Initialize Firebase Admin SDK and Firestore client
 
-        Tries credentials in this order:
-        1. FIREBASE_CREDENTIALS environment variable (JSON string)
-        2. credentials_path from config (file path)
+        Uses credentials_path from config (file path)
         """
         try:
             firebase_config = self.config.get('firebase_config', {})
-            cred = None
 
-            # Option 1: Try environment variable first (recommended)
-            credentials_json = os.getenv('FIREBASE_CREDENTIALS')
-            if credentials_json:
-                try:
-                    cred_dict = json.loads(credentials_json)
-                    cred = credentials.Certificate(cred_dict)
-                    print("✅ Using Firebase credentials from environment variable")
-                except json.JSONDecodeError as e:
-                    print(f"⚠️ Invalid JSON in FIREBASE_CREDENTIALS: {e}")
-                    print("Trying credentials file...")
+            # Get credentials file path
+            credentials_path = firebase_config.get('credentials_path')
+            if not credentials_path:
+                print("⚠️ Firebase enabled but no credentials_path found in config")
+                self.enabled = False
+                return
 
-            # Option 2: Fall back to credentials file
-            if not cred:
-                credentials_path = firebase_config.get('credentials_path')
-                if not credentials_path:
-                    print("⚠️ Firebase enabled but no credentials found")
-                    print("   Set FIREBASE_CREDENTIALS env var or credentials_path in config")
-                    self.enabled = False
-                    return
+            if not os.path.exists(credentials_path):
+                print(f"⚠️ Firebase credentials file not found: {credentials_path}")
+                self.enabled = False
+                return
 
-                if not os.path.exists(credentials_path):
-                    print(f"⚠️ Firebase credentials file not found: {credentials_path}")
-                    self.enabled = False
-                    return
-
-                cred = credentials.Certificate(credentials_path)
-                print(f"✅ Using Firebase credentials from file: {credentials_path}")
+            cred = credentials.Certificate(credentials_path)
+            print(f"✅ Using Firebase credentials from file: {credentials_path}")
 
             # Initialize Firebase app if not already initialized
             if not firebase_admin._apps:
@@ -106,9 +121,20 @@ class FirebaseLogger:
             return
 
         try:
+            # Get sender info from user profile
+            user_profile = self.config.get('user_profile', {})
+            sender_name = user_profile.get('name', '')
+            sender_phone = user_profile.get('phone_number', '')
+            sender_center = user_profile.get('center', '')
+
             event = {
                 'event_type': 'message_sent',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
+                'sender': {
+                    'name': sender_name,
+                    'phone': sender_phone,
+                    'center': sender_center
+                },
                 'recipient': {
                     'name': name,
                     'phone': phone
@@ -144,9 +170,20 @@ class FirebaseLogger:
             return
 
         try:
+            # Get sender info from user profile
+            user_profile = self.config.get('user_profile', {})
+            sender_name = user_profile.get('name', '')
+            sender_phone = user_profile.get('phone_number', '')
+            sender_center = user_profile.get('center', '')
+
             event = {
                 'event_type': 'message_failed',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
+                'sender': {
+                    'name': sender_name,
+                    'phone': sender_phone,
+                    'center': sender_center
+                },
                 'recipient': {
                     'name': name,
                     'phone': phone

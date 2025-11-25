@@ -9,9 +9,8 @@
 /src/__pycache__
 /src/WaBroadcaster.iml
 /src/wa_broadcaster.spec
-config
-config.json
-config/firebase-credentials.json
+# Config folder (auto-created, not tracked)
+config/
 
 # Virtual environment
 venv/
@@ -44,3 +43,4 @@ build/build/
 
 # Exception: Allow the main executable
 !wa_broadcaster.exe
+test_firebase_setup.py

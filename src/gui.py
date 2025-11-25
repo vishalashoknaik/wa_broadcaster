@@ -138,12 +138,16 @@ def load_config():
     else:
         # Default config
         return {
+            "user_profile": {
+                "name": "",
+                "phone_number": ""
+            },
             "google_sheets_config": {
                 "messages": {"sheet_url": "", "tab_name": "Sheet1"},
                 "contacts": {"sheet_url": "", "tab_name": "Sheet1"}
             },
             "followup_config": {"enabled": True, "delay_seconds": 3},
-            "default_delay": 15,
+            "default_delay": 60,
             "log_file": "config/whatsapp.log",
             "exclude_file": "config/exclude.txt",
             "sent_numbers_file": "config/sent_numbers.log",
@@ -295,7 +299,25 @@ config = st.session_state.config
 
 # Header
 st.title("🥷⚡ SPAMURAI")
-st.caption("Strike fast. Strike precise. Leave no trace.")
+st.caption("Each strike opens a window. Each message a potential possibility")
+
+# Initialize default values for advanced settings (used in Tab 2 but defined in Tab 3)
+# This prevents NameError if user clicks "Launch Strike" without visiting Tab 3
+override_enabled = get_nested_config(config, "message_override", "enabled", default=False)
+override_source = get_nested_config(config, "message_override", "source", default="sadhguru_quote")
+quick_message_text = get_nested_config(config, "message_override", "quick_message_text", default="")
+followup_enabled = get_nested_config(config, "followup_config", "enabled", default=True)
+followup_delay = get_nested_config(config, "followup_config", "delay_seconds", default=3)
+chrome_user_data = config.get("chrome_user_data", "/tmp/WhatsAppSession/Session1")
+log_file = config.get("log_file", "config/whatsapp.log")
+sent_file = config.get("sent_numbers_file", "config/sent_numbers.log")
+error_file = config.get("error_numbers_file", "config/failed_numbers.log")
+exclude_file = config.get("exclude_file", "config/exclude.txt")
+timeouts = config.get("timeouts", {"100": 30, "300": 30})
+timeout_1_msg = 100
+timeout_2_msg = 300
+timeout_1_min = timeouts.get("100", 30)
+timeout_2_min = timeouts.get("300", 30)
 
 # Tabs
 tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "🎯 Advanced Tactics"])
@@ -305,14 +327,14 @@ tab1, tab2, tab3 = st.tabs(["📜 Ninja Codex", "⚔️ Prepare Your Weapons", "
 # ============================================================================
 with tab1:
     st.markdown(f"""
-    ### The Way of the Digital Ninja
+    ### The Craft of the Spiritual Nurturer
 
     **Version:** {__version__}
 
-    > *"Strike fast. Strike precise. Leave no trace."*
+    > *"Each strike opens a window. Each message a potential possibility"*
 
-    SPAMURAI is the ultimate WhatsApp broadcast weapon, combining ancient ninja precision
-    with modern automation power. Master your campaigns with honor and stealth.
+    > *Experience SPAMURAI as a ninja-nurturer, carrying one carefully crafted drop of consciousness through every message.*
+    > *Each message becomes an act of awareness, a quiet moment of stillness carried through action.*
 
     ---
 
@@ -350,13 +372,85 @@ with tab1:
     ### 🥋 The Code
     Forged with Python, Selenium, and Streamlit
 
-    *Train hard. Strike harder. Disappear without a trace.* 🥷
+    *Align within. Strike with awareness. Slip back into stillness.* 🥷
     """)
 
 # ============================================================================
 # TAB 2: Campaign Setup
 # ============================================================================
 with tab2:
+    # User Profile Section (Mandatory)
+    st.markdown("### 👤 User Profile")
+    st.caption("Your identity - required for all campaigns")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        user_name = st.text_input(
+            "Your Name *",
+            value=get_nested_config(config, "user_profile", "name", default=""),
+            placeholder="Enter your full name...",
+            help="This will be used as your default nickname"
+        )
+
+    with col2:
+        user_phone = st.text_input(
+            "Your Phone Number *",
+            value=get_nested_config(config, "user_profile", "phone_number", default=""),
+            placeholder="Enter your 10-digit phone number...",
+            help="This will be used as the test number for campaigns"
+        )
+
+    with col3:
+        # Center dropdown with valid options
+        center_options = [
+            "B G Road",
+            "Malleshwaram",
+            "Hebbal",
+            "Electronic City",
+            "Bansawadi",
+            "Jayanagar",
+            "Vijayanagar",
+            "Marathalli",
+            "Whitefield",
+            "Koramangala",
+            "Indiranagar"
+        ]
+
+        current_center = get_nested_config(config, "user_profile", "center", default="")
+
+        # If current center is in the list, use its index; otherwise default to first option
+        if current_center in center_options:
+            default_index = center_options.index(current_center)
+        else:
+            default_index = 0
+
+        user_center = st.selectbox(
+            "Your Center *",
+            options=center_options,
+            index=default_index,
+            help="Select your center - this will be logged with all messages sent"
+        )
+
+    # Validation messages
+    validation_errors = []
+    if user_name and len(user_name.strip()) < 2:
+        validation_errors.append("❌ Name must be at least 2 characters")
+
+    if user_phone:
+        try:
+            normalized_phone = normalize_phone(user_phone)
+            if len(normalized_phone) != 10:
+                validation_errors.append("❌ Phone number must be exactly 10 digits")
+        except Exception:
+            validation_errors.append("❌ Invalid phone number format")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+
+    st.markdown("---")
+
     # Google Sheets Configuration
     st.markdown("### 📊 Google Sheets")
 
@@ -399,7 +493,7 @@ with tab2:
         "Default Delay (seconds between messages)",
         min_value=1,
         max_value=300,
-        value=config.get("default_delay", 15),
+        value=config.get("default_delay", 60),
         help="Time to wait between sending messages to different contacts"
     )
 
@@ -409,20 +503,76 @@ with tab2:
 
     with col1:
         if st.button("💾 Save Configuration", use_container_width=True, type="secondary"):
-            # Update config
-            update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
+            # Validate user profile
+            if not user_name or not user_name.strip():
+                st.error("🚫 Name is required!")
+            elif not user_phone or not user_phone.strip():
+                st.error("🚫 Phone number is required!")
+            elif not user_center or not user_center.strip():
+                st.error("🚫 Center is required!")
+            elif validation_errors:
+                st.error("🚫 Fix validation errors before saving!")
+            else:
+                # Save user profile
+                if "user_profile" not in config:
+                    config["user_profile"] = {}
 
-            # Save to file and update session
-            save_and_update_session(config, "✅ Configuration saved successfully!")
+                config["user_profile"]["name"] = user_name.strip()
+                config["user_profile"]["phone_number"] = normalize_phone(user_phone)
+                config["user_profile"]["center"] = user_center
+
+                # Update sheets config
+                update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
+
+                # Save to file and update session
+                save_and_update_session(config, "✅ Configuration saved successfully!")
 
     with col2:
         if st.button("⚡ Launch Strike", use_container_width=True, type="primary"):
-            # Validate required fields
-            if not messages_url or not contacts_url:
+            # Validate user profile first
+            if not user_name or not user_name.strip():
+                st.error("🚫 Strike aborted! Enter your name first.")
+            elif not user_phone or not user_phone.strip():
+                st.error("🚫 Strike aborted! Enter your phone number first.")
+            elif not user_center or not user_center.strip():
+                st.error("🚫 Strike aborted! Select your center first.")
+            elif validation_errors:
+                st.error("🚫 Strike aborted! Fix validation errors first.")
+            elif not messages_url or not contacts_url:
                 st.error("🚫 Strike aborted! Enter Google Sheets URLs first.")
             else:
-                # Auto-save config before launching
+                # Save user profile
+                if "user_profile" not in config:
+                    config["user_profile"] = {}
+
+                config["user_profile"]["name"] = user_name.strip()
+                config["user_profile"]["phone_number"] = normalize_phone(user_phone)
+                config["user_profile"]["center"] = user_center
+
+                # Auto-save config before launching (including advanced tactics)
                 update_sheets_config(config, messages_url, messages_tab, contacts_url, contacts_tab, default_delay)
+
+                # Save advanced tactics configuration
+                if "message_override" not in config:
+                    config["message_override"] = {}
+                config["message_override"]["enabled"] = override_enabled
+                if override_enabled:
+                    config["message_override"]["source"] = override_source
+                    if override_source == "quick_message":
+                        config["message_override"]["quick_message_text"] = quick_message_text
+
+                config["followup_config"]["enabled"] = followup_enabled
+                config["followup_config"]["delay_seconds"] = followup_delay
+                config["chrome_user_data"] = chrome_user_data
+                config["log_file"] = log_file
+                config["sent_numbers_file"] = sent_file
+                config["error_numbers_file"] = error_file
+                config["exclude_file"] = exclude_file
+                config["timeouts"] = {
+                    str(timeout_1_msg): timeout_1_min,
+                    str(timeout_2_msg): timeout_2_min
+                }
+
                 save_and_update_session(config)
 
                 # Show saving confirmation
@@ -452,7 +602,7 @@ with tab3:
 
     override_enabled = st.checkbox(
         "Override Google Sheet Messages",
-        value=get_nested_config(config, "message_override", "enabled", default=False),
+        value=override_enabled,
         help="When enabled, use alternative message source instead of Messages Google Sheet"
     )
 
@@ -462,7 +612,7 @@ with tab3:
             "Select Message Source",
             options=["sadhguru_quote", "quick_message"],
             format_func=lambda x: "🕉️ Sadhguru Quote" if x == "sadhguru_quote" else "✉️ Quick Message",
-            index=0 if get_nested_config(config, "message_override", "source", default="sadhguru_quote") == "sadhguru_quote" else 1,
+            index=0 if override_source == "sadhguru_quote" else 1,
             help="Choose your message source"
         )
 
@@ -470,7 +620,7 @@ with tab3:
         if override_source == "quick_message":
             quick_message_text = st.text_area(
                 "Quick Message",
-                value=get_nested_config(config, "message_override", "quick_message_text", default=""),
+                value=quick_message_text,
                 placeholder="Enter your message here...",
                 height=150,
                 help="This message will be sent to all contacts"
@@ -483,7 +633,7 @@ with tab3:
 
     followup_enabled = st.checkbox(
         "Enable followup messages",
-        value=get_nested_config(config, "followup_config", "enabled", default=True),
+        value=followup_enabled,
         help="Send a second message immediately after the first"
     )
 
@@ -491,7 +641,7 @@ with tab3:
         "Followup delay (seconds)",
         min_value=1,
         max_value=60,
-        value=get_nested_config(config, "followup_config", "delay_seconds", default=3),
+        value=followup_delay,
         help="Time to wait before sending the followup message"
     )
 
@@ -500,7 +650,7 @@ with tab3:
 
     chrome_user_data = st.text_input(
         "Chrome User Data Path",
-        value=config.get("chrome_user_data", "/tmp/WhatsAppSession/Session1"),
+        value=chrome_user_data,
         help="Path to Chrome profile directory for persistent WhatsApp Web session"
     )
 
@@ -510,12 +660,12 @@ with tab3:
     col1, col2 = st.columns(2)
 
     with col1:
-        log_file = st.text_input("Log File", value=config.get("log_file", "config/whatsapp.log"))
-        sent_file = st.text_input("Sent Numbers File", value=config.get("sent_numbers_file", "config/sent_numbers.log"))
+        log_file = st.text_input("Log File", value=log_file)
+        sent_file = st.text_input("Sent Numbers File", value=sent_file)
 
     with col2:
-        error_file = st.text_input("Error Numbers File", value=config.get("error_numbers_file", "config/failed_numbers.log"))
-        exclude_file = st.text_input("Exclude File", value=config.get("exclude_file", "config/exclude.txt"))
+        error_file = st.text_input("Error Numbers File", value=error_file)
+        exclude_file = st.text_input("Exclude File", value=exclude_file)
 
     # Timeouts
     st.markdown("### ⏸️ Timeouts")
@@ -523,15 +673,13 @@ with tab3:
 
     col1, col2 = st.columns(2)
 
-    timeouts = config.get("timeouts", {"100": 30, "300": 30})
-
     with col1:
-        timeout_1_msg = st.number_input("After messages", value=100, min_value=1, key="timeout_1_msg")
-        timeout_2_msg = st.number_input("After messages", value=300, min_value=1, key="timeout_2_msg")
+        timeout_1_msg = st.number_input("After messages", value=timeout_1_msg, min_value=1, key="timeout_1_msg")
+        timeout_2_msg = st.number_input("After messages", value=timeout_2_msg, min_value=1, key="timeout_2_msg")
 
     with col2:
-        timeout_1_min = st.number_input("Wait (minutes)", value=timeouts.get("100", 30), min_value=1, key="timeout_1_min")
-        timeout_2_min = st.number_input("Wait (minutes)", value=timeouts.get("300", 30), min_value=1, key="timeout_2_min")
+        timeout_1_min = st.number_input("Wait (minutes)", value=timeout_1_min, min_value=1, key="timeout_1_min")
+        timeout_2_min = st.number_input("Wait (minutes)", value=timeout_2_min, min_value=1, key="timeout_2_min")
 
     # Save Advanced Settings
     st.markdown("")  # Small spacing

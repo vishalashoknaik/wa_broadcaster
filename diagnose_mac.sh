@@ -30,11 +30,12 @@ echo "  1. Operating System Information"
 echo "  2. Python Installation and Version"
 echo "  3. pip Package Manager"
 echo "  4. Required Python Packages"
-echo "  5. Chrome Browser Installation"
-echo "  6. ChromeDriver Status"
-echo "  7. Environment Variables"
-echo "  8. File Permissions"
-echo "  9. Network Connectivity"
+echo "  5. Firebase Credentials (MANDATORY)"
+echo "  6. Chrome Browser Installation"
+echo "  7. ChromeDriver Status"
+echo "  8. Environment Variables"
+echo "  9. File Permissions"
+echo "  10. Network Connectivity"
 echo ""
 echo "Press Enter to start diagnosis..."
 read
@@ -272,11 +273,100 @@ else
 fi
 
 ################################################################################
-# STEP 5: Chrome Browser
+# STEP 5: Firebase Credentials (MANDATORY)
 ################################################################################
 echo ""
 echo "============================================================================"
-echo "[STEP 5/9] Chrome Browser Installation"
+echo "[STEP 5/10] Firebase Credentials (MANDATORY)"
+echo "============================================================================"
+echo ""
+
+FIREBASE_READY=0
+
+echo "Checking Firebase credentials..."
+echo ""
+
+# Check environment variable
+if [ -n "$FIREBASE_CREDENTIALS" ]; then
+    echo -e "${GREEN}[OK]${NC} FIREBASE_CREDENTIALS environment variable is set"
+
+    # Validate JSON
+    if echo "$FIREBASE_CREDENTIALS" | python3 -c "import sys, json; json.load(sys.stdin)" 2>/dev/null; then
+        echo -e "${GREEN}[OK]${NC} Credentials JSON is valid"
+        FIREBASE_READY=1
+        echo "FIREBASE: Environment variable (valid)" >> "$LOGFILE"
+    else
+        echo -e "${RED}[ERROR]${NC} FIREBASE_CREDENTIALS contains invalid JSON"
+        echo "FIREBASE: Environment variable (INVALID JSON)" >> "$LOGFILE"
+        ((ISSUES_FOUND++))
+    fi
+else
+    echo -e "${YELLOW}[WARNING]${NC} FIREBASE_CREDENTIALS environment variable not set"
+fi
+
+echo ""
+
+# Check credentials file
+if [ -f "$SCRIPT_DIR/config/firebase-credentials.json" ]; then
+    echo -e "${GREEN}[OK]${NC} Credentials file found at: config/firebase-credentials.json"
+
+    # Validate JSON
+    if python3 -c "import json; json.load(open('$SCRIPT_DIR/config/firebase-credentials.json'))" 2>/dev/null; then
+        echo -e "${GREEN}[OK]${NC} Credentials file JSON is valid"
+        if [ $FIREBASE_READY -eq 0 ]; then
+            FIREBASE_READY=1
+            echo "FIREBASE: File-based (valid)" >> "$LOGFILE"
+        fi
+    else
+        echo -e "${RED}[ERROR]${NC} Credentials file contains invalid JSON"
+        echo "FIREBASE: File-based (INVALID JSON)" >> "$LOGFILE"
+        ((ISSUES_FOUND++))
+    fi
+else
+    echo -e "${YELLOW}[WARNING]${NC} No credentials file at: config/firebase-credentials.json"
+fi
+
+echo ""
+
+if [ $FIREBASE_READY -eq 0 ]; then
+    echo -e "${RED}[ERROR]${NC} Firebase credentials NOT configured!"
+    echo ""
+    echo "Firebase is MANDATORY for SPAMURAI to function."
+    echo ""
+    echo "FIX:"
+    echo "  1. Get Firebase credentials from:"
+    echo "     https://console.firebase.google.com/"
+    echo "     Project Settings → Service Accounts → Generate New Private Key"
+    echo ""
+    echo "  2. Run setup script:"
+    echo "     ./setup_firebase.sh /path/to/credentials.json"
+    echo ""
+    echo "  3. Re-run this diagnostic"
+    echo ""
+    echo "FIREBASE: NOT CONFIGURED" >> "$LOGFILE"
+    ((ISSUES_FOUND++))
+else
+    echo -e "${GREEN}[OK]${NC} Firebase credentials are properly configured"
+
+    # Test Firebase connection if firebase-admin is installed
+    if $PIP_CMD show firebase-admin &> /dev/null; then
+        echo ""
+        echo "Testing Firebase connection..."
+        if python3 "$SCRIPT_DIR/test_firebase.py" 2>&1 | grep -q "Firebase enabled mode works"; then
+            echo -e "${GREEN}[OK]${NC} Firebase connection successful"
+        else
+            echo -e "${YELLOW}[WARNING]${NC} Could not verify Firebase connection"
+            echo "    Make sure Firebase is enabled in config.json"
+        fi
+    fi
+fi
+
+################################################################################
+# STEP 6: Chrome Browser
+################################################################################
+echo ""
+echo "============================================================================"
+echo "[STEP 6/10] Chrome Browser Installation"
 echo "============================================================================"
 echo ""
 
@@ -310,11 +400,11 @@ else
 fi
 
 ################################################################################
-# STEP 6: ChromeDriver
+# STEP 7: ChromeDriver
 ################################################################################
 echo ""
 echo "============================================================================"
-echo "[STEP 6/9] ChromeDriver Status"
+echo "[STEP 7/10] ChromeDriver Status"
 echo "============================================================================"
 echo ""
 
@@ -339,11 +429,11 @@ else
 fi
 
 ################################################################################
-# STEP 7: Environment Variables
+# STEP 8: Environment Variables
 ################################################################################
 echo ""
 echo "============================================================================"
-echo "[STEP 7/9] Environment Variables"
+echo "[STEP 8/10] Environment Variables"
 echo "============================================================================"
 echo ""
 
@@ -365,11 +455,11 @@ echo "Checking SHELL:"
 echo "  Current shell: $SHELL"
 
 ################################################################################
-# STEP 8: File Permissions
+# STEP 9: File Permissions
 ################################################################################
 echo ""
 echo "============================================================================"
-echo "[STEP 8/9] File Permissions"
+echo "[STEP 9/10] File Permissions"
 echo "============================================================================"
 echo ""
 
@@ -397,11 +487,11 @@ else
 fi
 
 ################################################################################
-# STEP 9: Network Connectivity
+# STEP 10: Network Connectivity
 ################################################################################
 echo ""
 echo "============================================================================"
-echo "[STEP 9/9] Network Connectivity"
+echo "[STEP 10/10] Network Connectivity"
 echo "============================================================================"
 echo ""
 
@@ -459,6 +549,12 @@ if [ $CHROME_FOUND -eq 0 ]; then
     echo -e "${RED}[ERROR]${NC} Chrome NOT installed"
 else
     echo -e "${GREEN}[OK]${NC} Chrome installed"
+fi
+
+if [ $FIREBASE_READY -eq 0 ]; then
+    echo -e "${RED}[ERROR]${NC} Firebase NOT configured"
+else
+    echo -e "${GREEN}[OK]${NC} Firebase configured"
 fi
 
 echo ""

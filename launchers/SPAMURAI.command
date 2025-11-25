@@ -84,11 +84,11 @@ echo -e "${GREEN}[OK]${NC} Virtual environment activated"
 echo ""
 
 # Step 4: Check and install dependencies
-echo -e "${CYAN}[Step 4/5]${NC} Checking dependencies..."
+echo -e "${CYAN}[Step 4/5]${NC} Checking and installing dependencies..."
 echo ""
 
-if ! python -c "import streamlit" 2>/dev/null; then
-    echo "Streamlit not found. Installing dependencies..."
+if ! python3 -c "import streamlit; import firebase_admin" 2>/dev/null; then
+    echo "Required packages not found. Installing dependencies..."
     echo "This may take a few minutes..."
     echo ""
 
@@ -111,6 +111,62 @@ else
 fi
 echo ""
 
+# Check if Firebase credentials need setup (do this right after dependencies)
+# We need setup if EITHER:
+#   1. firebase.json doesn't exist, OR
+#   2. config.json doesn't have firebase_config section
+
+NEEDS_FIREBASE_SETUP=false
+
+# Check if firebase.json exists
+if [ ! -f "$PROJECT_DIR/config/firebase.json" ]; then
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+# Check if config.json has firebase_config section
+if [ -f "$PROJECT_DIR/config.json" ]; then
+    # Use python to check if firebase_config exists in config.json
+    HAS_FIREBASE_CONFIG=$(python3 -c "import json; config = json.load(open('config.json')); print('yes' if 'firebase_config' in config else 'no')" 2>/dev/null || echo "no")
+
+    if [ "$HAS_FIREBASE_CONFIG" = "no" ] || [ -z "$HAS_FIREBASE_CONFIG" ]; then
+        NEEDS_FIREBASE_SETUP=true
+    fi
+else
+    # config.json doesn't exist - will need Firebase setup
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+if [ "$NEEDS_FIREBASE_SETUP" = "true" ]; then
+    echo -e "${CYAN}[Step 4b/5]${NC} Firebase credentials setup..."
+    echo ""
+    echo -e "${YELLOW}[NOTICE]${NC} Firebase configuration incomplete. Starting automatic setup..."
+    echo ""
+
+    # Run automated Firebase setup
+    python3 src/firebase_auto_setup.py
+
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo -e "${RED}[ERROR]${NC} Firebase setup failed or was cancelled."
+        echo ""
+        echo "Please contact your POC if you need assistance."
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+
+    # Verify credentials were created and config updated
+    if [ -f "$PROJECT_DIR/config/firebase.json" ]; then
+        echo -e "${GREEN}[OK]${NC} Firebase credentials configured successfully"
+    else
+        echo -e "${RED}[ERROR]${NC} Setup completed but credentials file not found!"
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+    echo ""
+fi
+
 # Step 5: Launch SPAMURAI
 echo -e "${CYAN}[Step 5/5]${NC} Launching SPAMURAI GUI..."
 echo ""
@@ -123,7 +179,7 @@ echo "Press Ctrl+C to stop the server"
 echo ""
 
 # Launch Streamlit
-python -m streamlit run src/gui.py
+python3 -m streamlit run src/gui.py
 
 # If streamlit exits with error, pause to show message
 if [ $? -ne 0 ]; then
