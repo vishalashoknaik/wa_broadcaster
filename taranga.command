@@ -53,22 +53,11 @@ if [ -n "$GIT_CMD" ]; then
             echo -e "${YELLOW}⚡ New version available! Updating automatically...${NC}"
             echo ""
 
-            # Stash any local changes
-            if ! $GIT_CMD diff-index --quiet HEAD -- 2>/dev/null; then
-                $GIT_CMD stash push -m "Auto-stash before update" &> /dev/null
-            fi
-
-            # Pull latest changes
-            if $GIT_CMD pull origin master; then
-                echo ""
+            # Pull latest changes from master (always use master as source of truth)
+            if $GIT_CMD pull origin master &> /dev/null; then
                 echo -e "${GREEN}✅ Updated successfully!${NC}"
-                echo ""
-                echo "Please re-run this script to use the latest version."
-                echo ""
-                read -p "Press Enter to exit..."
-                exit 0
+                echo "Continuing with latest version..."
             else
-                echo ""
                 echo -e "${RED}❌ Update failed${NC}"
                 echo "Continuing with current version..."
             fi
@@ -219,8 +208,63 @@ echo ""
 echo -e "${GREEN}[OK]${NC} Dependencies ready"
 echo ""
 
+# Step 4b: Check Firebase credentials setup
+echo -e "${CYAN}[Step 4b/6]${NC} Checking Firebase credentials..."
+echo ""
+
+NEEDS_FIREBASE_SETUP=false
+
+# Check if firebase.json exists
+if [ ! -f "$PROJECT_DIR/config/firebase.json" ]; then
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+# Check if config.json has firebase_config section
+if [ -f "$PROJECT_DIR/config.json" ]; then
+    HAS_FIREBASE_CONFIG=$(python -c "import json; config = json.load(open('config.json')); print('yes' if 'firebase_config' in config else 'no')" 2>/dev/null)
+    if [ "$HAS_FIREBASE_CONFIG" != "yes" ]; then
+        NEEDS_FIREBASE_SETUP=true
+    fi
+else
+    # config.json doesn't exist - will need Firebase setup
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+if [ "$NEEDS_FIREBASE_SETUP" = true ]; then
+    echo -e "${YELLOW}[NOTICE]${NC} Firebase configuration incomplete. Starting automatic setup..."
+    echo ""
+
+    # Run automated Firebase setup
+    python src/firebase_auto_setup.py
+
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo -e "${RED}[ERROR]${NC} Firebase setup failed or was cancelled."
+        echo ""
+        echo "Please contact your POC if you need assistance."
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+
+    # Verify credentials were created and config updated
+    if [ -f "$PROJECT_DIR/config/firebase.json" ]; then
+        echo ""
+        echo -e "${GREEN}[OK]${NC} Firebase credentials configured successfully"
+    else
+        echo ""
+        echo -e "${RED}[ERROR]${NC} Setup completed but credentials file not found!"
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+else
+    echo -e "${GREEN}[OK]${NC} Firebase credentials already configured"
+fi
+echo ""
+
 # Step 5: Launch SPAMURAI
-echo -e "${CYAN}[Step 5/5]${NC} Launching SPAMURAI GUI..."
+echo -e "${CYAN}[Step 5/6]${NC} Launching SPAMURAI GUI..."
 echo ""
 echo "========================================="
 echo "  🚀 GUI will open in your browser"

@@ -91,69 +91,50 @@ FULL_PATH="$INSTALL_DIR/$REPO_NAME"
 echo -e "${GREEN}[OK]${NC} Install location: $FULL_PATH"
 echo ""
 
-# Step 3: Install or Update
-echo -e "${CYAN}[Step 3/7]${NC} Installing/Updating Taranga..."
+# Step 3: Check for existing installation
+echo -e "${CYAN}[Step 3/7]${NC} Checking for existing installation..."
 echo ""
 
 if [ -d "$FULL_PATH" ]; then
-    # Repository exists - UPDATE
-    echo -e "${BLUE}Found existing installation!${NC}"
+    # Repository already exists - this script is for CLEAN INSTALL only
+    echo -e "${YELLOW}[NOTICE]${NC} Taranga is already installed at:"
+    echo "  $FULL_PATH"
     echo ""
-    echo "Updating to latest version..."
+    echo -e "${CYAN}This setup script is for clean installations only.${NC}"
     echo ""
+    echo "To launch Taranga, use:"
+    echo -e "  ${GREEN}taranga.command${NC} (in the installed folder)"
+    echo ""
+    echo "The launcher will automatically:"
+    echo "  • Update to the latest version"
+    echo "  • Install dependencies"
+    echo "  • Launch the application"
+    echo ""
+    echo "Press ENTER to exit..."
+    read
+    exit 0
+fi
 
+# Repository doesn't exist - FRESH INSTALL
+echo -e "${BLUE}No existing installation found.${NC}"
+echo ""
+echo "Installing Taranga from GitHub..."
+echo ""
+
+if git clone "$REPO_URL" "$FULL_PATH"; then
+    echo ""
+    echo -e "${GREEN}✅ INSTALLATION SUCCESSFUL!${NC}"
+    echo ""
+    echo "Taranga has been installed!"
     cd "$FULL_PATH"
-
-    # Stash any local changes
-    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        echo "Saving your local changes..."
-        git stash push -m "Auto-stash before update on $(date)"
-        STASHED=true
-    fi
-
-    # Pull latest changes
-    echo "Fetching updates from GitHub..."
-    if git pull origin master; then
-        echo ""
-        echo -e "${GREEN}✅ UPDATE SUCCESSFUL!${NC}"
-        echo ""
-        echo "Taranga has been updated to the latest version!"
-
-        if [ "$STASHED" = true ]; then
-            echo ""
-            echo -e "${YELLOW}Note: Your local changes were stashed.${NC}"
-            echo "To restore them, run: git stash pop"
-        fi
-    else
-        echo ""
-        echo -e "${RED}[ERROR]${NC} Update failed!"
-        echo "Please check your internet connection and try again."
-        echo ""
-        echo "Press ENTER to exit..."
-        read
-        exit 1
-    fi
 else
-    # Repository doesn't exist - FRESH INSTALL
-    echo -e "${BLUE}No existing installation found.${NC}"
     echo ""
-    echo "Installing Taranga from GitHub..."
+    echo -e "${RED}[ERROR]${NC} Installation failed!"
+    echo "Please check your internet connection and try again."
     echo ""
-
-    if git clone "$REPO_URL" "$FULL_PATH"; then
-        echo ""
-        echo -e "${GREEN}✅ INSTALLATION SUCCESSFUL!${NC}"
-        echo ""
-        echo "Taranga has been installed!"
-    else
-        echo ""
-        echo -e "${RED}[ERROR]${NC} Installation failed!"
-        echo "Please check your internet connection and try again."
-        echo ""
-        echo "Press ENTER to exit..."
-        read
-        exit 1
-    fi
+    echo "Press ENTER to exit..."
+    read
+    exit 1
 fi
 
 # Step 4: Check Python installation
@@ -277,16 +258,11 @@ else
 fi
 
 # Step 7: Set up virtual environment
-echo -e "${CYAN}[Step 7/7]${NC} Setting up Python virtual environment..."
+echo -e "${CYAN}[Step 7/8]${NC} Setting up Python virtual environment..."
 echo ""
 
 cd "$FULL_PATH"
 VENV_PATH="$FULL_PATH/venv"
-
-if [ -d "$VENV_PATH" ]; then
-    echo -e "${YELLOW}Virtual environment already exists. Recreating...${NC}"
-    rm -rf "$VENV_PATH"
-fi
 
 echo "Creating virtual environment with $PYTHON_CMD..."
 $PYTHON_CMD -m venv "$VENV_PATH"
@@ -321,15 +297,15 @@ echo ""
 
 # Upgrade pip
 echo "Upgrading pip..."
-pip install --upgrade pip > /dev/null 2>&1
+python -m pip install --upgrade pip > /dev/null 2>&1
 
 # Check for requirements.txt and install
-if [ -f "$FULL_PATH/requirements.txt" ]; then
+if [ -f "requirements.txt" ]; then
     echo "Installing Python dependencies..."
     echo "This may take a few minutes..."
     echo ""
 
-    pip install -r "$FULL_PATH/requirements.txt"
+    python -m pip install -r requirements.txt
 
     if [ $? -ne 0 ]; then
         echo ""
@@ -341,6 +317,60 @@ if [ -f "$FULL_PATH/requirements.txt" ]; then
     fi
 else
     echo -e "${YELLOW}[NOTICE]${NC} No requirements.txt found. Skipping dependency installation."
+fi
+echo ""
+
+# Step 8: Setup Firebase credentials
+echo -e "${CYAN}[Step 8/8]${NC} Setting up Firebase credentials..."
+echo ""
+
+NEEDS_FIREBASE_SETUP=false
+
+# Check if firebase.json exists
+if [ ! -f "config/firebase.json" ]; then
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+# Check if config.json has firebase_config section
+if [ -f "config.json" ]; then
+    HAS_FIREBASE_CONFIG=$(python -c "import json; config = json.load(open('config.json')); print('yes' if 'firebase_config' in config else 'no')" 2>/dev/null)
+    if [ "$HAS_FIREBASE_CONFIG" != "yes" ]; then
+        NEEDS_FIREBASE_SETUP=true
+    fi
+else
+    # config.json doesn't exist - will need Firebase setup
+    NEEDS_FIREBASE_SETUP=true
+fi
+
+if [ "$NEEDS_FIREBASE_SETUP" = true ]; then
+    echo -e "${YELLOW}[NOTICE]${NC} Firebase configuration needed for first-time setup."
+    echo ""
+
+    # Run automated Firebase setup
+    python src/firebase_auto_setup.py
+
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo -e "${RED}[ERROR]${NC} Firebase setup failed or was cancelled."
+        echo ""
+        echo "Please contact your POC if you need assistance."
+        echo "You can also run the setup later using taranga.command"
+        echo ""
+        echo "Press ENTER to continue..."
+        read
+    else
+        # Verify credentials were created and config updated
+        if [ -f "config/firebase.json" ]; then
+            echo ""
+            echo -e "${GREEN}[OK]${NC} Firebase credentials configured successfully"
+        else
+            echo ""
+            echo -e "${YELLOW}[WARNING]${NC} Setup completed but credentials file not found!"
+            echo "You can run the setup later using taranga.command"
+        fi
+    fi
+else
+    echo -e "${GREEN}[OK]${NC} Firebase credentials already configured"
 fi
 echo ""
 
@@ -358,7 +388,7 @@ echo "  • Virtual Environment: $VENV_PATH"
 echo "  • Dependencies: Installed"
 echo ""
 echo "To launch Taranga, double-click:"
-echo "  • SPAMURAI.command (in the installed folder)"
+echo "  • taranga.command (in the installed folder)"
 echo ""
 echo -e "${BLUE}Manual Activation (if needed):${NC}"
 echo "  cd $FULL_PATH"
