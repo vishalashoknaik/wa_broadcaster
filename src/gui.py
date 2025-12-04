@@ -7,7 +7,7 @@ import platform
 from lib import normalize_phone
 
 # Add version
-__version__ = "1.11.0"
+__version__ = "1.12.0"
 
 # Page config
 st.set_page_config(
